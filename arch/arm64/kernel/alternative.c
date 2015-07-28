@@ -42,7 +42,7 @@ struct alt_region {
  * Check if the target PC is within an alternative block.
  */
 
-static int __apply_alternatives(void *alt_region)
+static void __apply_alternatives(void *alt_region)
 {
 	struct alt_instr *alt;
 	u32 *origptr, *replptr, *endptr;
@@ -63,19 +63,38 @@ static int __apply_alternatives(void *alt_region)
 		for (; origptr < endptr; origptr++, replptr++)
 			BUG_ON(aarch64_insn_patch_text_nosync(origptr, *replptr));
 	}
-
-	return 0;
 }
 
-void apply_alternatives_all(void)
+/*
+ * We might be patching the stop_machine state machine, so implement a
+ * really simple polling protocol here.
+ */
+static int __apply_alternatives_multi_stop(void *unused)
 {
+	static int patched = 0;
 	struct alt_region region = {
 		.begin	= __alt_instructions,
 		.end	= __alt_instructions_end,
 	};
 
+	/* We always have a CPU 0 at this point (__init) */
+	if (smp_processor_id()) {
+		while (!READ_ONCE(patched))
+			cpu_relax();
+	} else {
+		BUG_ON(patched);
+		__apply_alternatives(&region);
+		/* Barriers provided by the cache flushing */
+		WRITE_ONCE(patched, 1);
+	}
+
+	return 0;
+}
+
+void __init apply_alternatives_all(void)
+{
 	/* better not try code patching on a live SMP system */
-	stop_machine(__apply_alternatives, &region, NULL);
+	stop_machine(__apply_alternatives_multi_stop, NULL, cpu_online_mask);
 }
 
 void apply_alternatives(void *start, size_t length)
