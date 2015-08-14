@@ -5874,6 +5874,8 @@ void wake_up_new_task(struct task_struct *p)
 	struct rq *rq;
 
 	raw_spin_lock_irqsave(&p->pi_lock, flags);
+	/* Initialize new task's runnable average */
+	init_entity_runnable_average(&p->se);
 	init_new_task_load(p);
 	add_new_task_to_grp(p);
 #ifdef CONFIG_SMP
@@ -5885,8 +5887,6 @@ void wake_up_new_task(struct task_struct *p)
 	set_task_cpu(p, select_task_rq(p, task_cpu(p), SD_BALANCE_FORK, 0));
 #endif
 
-	/* Initialize new task's runnable average */
-	init_entity_runnable_average(&p->se);
 	rq = __task_rq_lock(p);
 	mark_task_starting(p);
 	activate_task(rq, p, 0);
