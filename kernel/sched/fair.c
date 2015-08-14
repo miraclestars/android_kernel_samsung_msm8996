@@ -2434,6 +2434,8 @@ static u32 __compute_runnable_contrib(u64 n)
 	return contrib + runnable_avg_yN_sum[n];
 }
 
+#define scale(v, s) ((v)*(s) >> SCHED_CAPACITY_SHIFT)
+
 static void add_to_scaled_stat(int cpu, struct sched_avg *sa, u64 delta);
 static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods);
 
@@ -4231,9 +4233,9 @@ static __always_inline int
 __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		  unsigned long weight, int running, struct cfs_rq *cfs_rq)
 {
-	u64 delta, periods;
+	u64 delta, scaled_delta, periods;
 	u32 contrib;
-	int delta_w, decayed = 0;
+	int delta_w, scaled_delta_w, decayed = 0;
 	unsigned long scale_freq = arch_scale_freq_capacity(NULL, cpu);
 
 	delta = now - sa->last_update_time;
@@ -4269,14 +4271,17 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		 * period and accrue it.
 		 */
 		delta_w = 1024 - delta_w;
+		scaled_delta_w = scale(delta_w, scale_freq);
 		if (weight) {
-			sa->load_sum += weight * delta_w;
-			if (cfs_rq)
-				cfs_rq->runnable_load_sum += weight * delta_w;
+			sa->load_sum += weight * scaled_delta_w;
+			if (cfs_rq) {
+				cfs_rq->runnable_load_sum +=
+						weight * scaled_delta_w;
+			}
 			add_to_scaled_stat(cpu, sa, delta_w);
 		}
 		if (running)
-			sa->util_sum += delta_w * scale_freq >> SCHED_CAPACITY_SHIFT;
+			sa->util_sum += scaled_delta_w;
 
 		delta -= delta_w;
 
@@ -4294,6 +4299,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 
 		/* Efficiently calculate \sum (1..n_period) 1024*y^i */
 		contrib = __compute_runnable_contrib(periods);
+		contrib = scale(contrib, scale_freq);
 		if (weight) {
 			sa->load_sum += weight * contrib;
 			if (cfs_rq)
@@ -4301,18 +4307,19 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 			add_to_scaled_stat(cpu, sa, contrib);
 		}
 		if (running)
-			sa->util_sum += contrib * scale_freq >> SCHED_CAPACITY_SHIFT;
+			sa->util_sum += contrib;
 	}
 
 	/* Remainder of delta accrued against u_0` */
+	scaled_delta = scale(delta, scale_freq);
 	if (weight) {
-		sa->load_sum += weight * delta;
+		sa->load_sum += weight * scaled_delta;
 		if (cfs_rq)
-			cfs_rq->runnable_load_sum += weight * delta;
+			cfs_rq->runnable_load_sum += weight * scaled_delta;
 		add_to_scaled_stat(cpu, sa, delta);
 	}
 	if (running)
-		sa->util_sum += delta * scale_freq >> SCHED_CAPACITY_SHIFT;
+		sa->util_sum += scaled_delta;
 
 	sa->period_contrib += delta;
 
