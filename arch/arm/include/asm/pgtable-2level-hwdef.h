@@ -22,6 +22,7 @@
 #define PMD_TYPE_SECT		(_AT(pmdval_t, 2) << 0)
 #define PMD_BIT4		(_AT(pmdval_t, 1) << 4)
 #define PMD_DOMAIN(x)		(_AT(pmdval_t, (x)) << 5)
+#define PMD_DOMAIN_MASK		PMD_DOMAIN(0x0f)
 #define PMD_PROTECTION		(_AT(pmdval_t, 1) << 9)		/* v5 */
 /*
  *   - section
