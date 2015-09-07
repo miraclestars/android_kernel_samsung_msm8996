@@ -2434,7 +2434,7 @@ static u32 __compute_runnable_contrib(u64 n)
 	return contrib + runnable_avg_yN_sum[n];
 }
 
-#define scale(v, s) ((v)*(s) >> SCHED_CAPACITY_SHIFT)
+#define cap_scale(v, s) ((v)*(s) >> SCHED_CAPACITY_SHIFT)
 
 static void add_to_scaled_stat(int cpu, struct sched_avg *sa, u64 delta);
 static inline void decay_scaled_stat(struct sched_avg *sa, u64 periods);
@@ -4272,7 +4272,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		 * period and accrue it.
 		 */
 		delta_w = 1024 - delta_w;
-		scaled_delta_w = scale(delta_w, scale_freq);
+		scaled_delta_w = cap_scale(delta_w, scale_freq);
 		if (weight) {
 			sa->load_sum += weight * scaled_delta_w;
 			if (cfs_rq) {
@@ -4282,7 +4282,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 			add_to_scaled_stat(cpu, sa, delta_w);
 		}
 		if (running)
-			sa->util_sum += scale(scaled_delta_w, scale_cpu);
+			sa->util_sum += cap_scale(scaled_delta_w, scale_cpu);
 
 		delta -= delta_w;
 
@@ -4300,7 +4300,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 
 		/* Efficiently calculate \sum (1..n_period) 1024*y^i */
 		contrib = __compute_runnable_contrib(periods);
-		contrib = scale(contrib, scale_freq);
+		contrib = cap_scale(contrib, scale_freq);
 		if (weight) {
 			sa->load_sum += weight * contrib;
 			if (cfs_rq)
@@ -4308,11 +4308,11 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 			add_to_scaled_stat(cpu, sa, contrib);
 		}
 		if (running)
-			sa->util_sum += scale(contrib, scale_cpu);
+			sa->util_sum += cap_scale(contrib, scale_cpu);
 	}
 
 	/* Remainder of delta accrued against u_0` */
-	scaled_delta = scale(delta, scale_freq);
+	scaled_delta = cap_scale(delta, scale_freq);
 	if (weight) {
 		sa->load_sum += weight * scaled_delta;
 		if (cfs_rq)
@@ -4320,7 +4320,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		add_to_scaled_stat(cpu, sa, delta);
 	}
 	if (running)
-		sa->util_sum += scale(scaled_delta, scale_cpu);
+		sa->util_sum += cap_scale(scaled_delta, scale_cpu);
 
 	sa->period_contrib += delta;
 
