@@ -1402,12 +1402,6 @@ struct ext4_sb_info {
 	struct ratelimit_state s_warning_ratelimit_state;
 	struct ratelimit_state s_msg_ratelimit_state;
 
-#ifdef CONFIG_EXT4_FS_ENCRYPTION
-	/* Encryption */
-	uint32_t s_file_encryption_mode;
-	uint32_t s_dir_encryption_mode;
-#endif
-
 	/* Debugging info. for backing device reset */
 	__u32 s_bd_reset_cnt;
 	__u8 s_bd_reset_time[16];
