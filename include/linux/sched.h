@@ -51,6 +51,7 @@ struct sched_param {
 #include <linux/resource.h>
 #include <linux/timer.h>
 #include <linux/hrtimer.h>
+#include <linux/kcov.h>
 #include <linux/task_io_accounting.h>
 #include <linux/latencytop.h>
 #include <linux/cred.h>
@@ -1772,7 +1773,6 @@ struct task_struct {
 	/* kcov desciptor wired with this task or NULL. */
 	struct kcov	*kcov;
 #endif
-
 #ifdef CONFIG_MEMCG /* memcg uses this to do batch job */
 	unsigned int memcg_kmem_skip_account;
 	struct memcg_oom_info {
