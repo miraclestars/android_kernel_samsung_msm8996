@@ -448,6 +448,13 @@ enum msm_actuator_cfg_type_t {
 	CFG_ACTUATOR_INIT,
 };
 
+struct msm_ois_opcode {
+	uint32_t prog;
+	uint32_t coeff;
+	uint32_t pheripheral;
+	uint32_t memory;
+};
+
 enum msm_ois_cfg_type_t {
 	CFG_OIS_INIT,
 	CFG_OIS_POWERDOWN,
@@ -461,6 +468,11 @@ enum msm_ois_cfg_type_t {
 	CFG_OIS_READ_MANUAL_CAL_INFO,
 	CFG_OIS_GET_FW_STATUS,
 	CFG_OIS_FW_UPDATE,
+};
+
+enum msm_ois_cfg_download_type_t {
+	CFG_OIS_DOWNLOAD,
+	CFG_OIS_DATA_CONFIG,
 };
 
 enum msm_ois_i2c_operation {
@@ -561,6 +573,11 @@ enum af_camera_name {
 	ACTUATOR_WEB_CAM_2,
 };
 
+struct msm_ois_slave_info {
+	char ois_name[MAX_OIS_NAME_SIZE];
+	uint32_t i2c_addr;
+	struct msm_ois_opcode opcode;
+};
 struct msm_ois_cfg_data {
 	int cfgtype;
 	uint16_t set_mode_value;
@@ -570,6 +587,11 @@ struct msm_ois_cfg_data {
 		struct msm_ois_set_info_t set_info;
 		struct msm_camera_i2c_seq_reg_setting *settings;
 	} cfg;
+};
+
+struct msm_ois_cfg_download_data {
+	int cfgtype;
+	struct msm_ois_slave_info slave_info;
 };
 
 struct msm_actuator_set_position_t {
@@ -681,4 +703,8 @@ struct sensor_init_cfg_data {
 
 #define VIDIOC_MSM_COMPANION_IO_CFG \
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 14, struct companion_cfg_data)
+
+#define VIDIOC_MSM_OIS_CFG_DOWNLOAD \
+	_IOWR('V', BASE_VIDIOC_PRIVATE + 14, struct msm_ois_cfg_download_data)
+
 #endif
