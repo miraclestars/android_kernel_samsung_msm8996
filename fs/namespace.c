@@ -3642,9 +3642,8 @@ static bool fs_fully_visible(struct file_system_type *type, int *new_mnt_flags)
 			if (!(mnt->mnt->mnt_flags & MNT_LOCKED))
 				continue;
 #else
-			if (!(mnt->mnt.mnt_flags & MNT_LOCKED))
+			if (!(child->mnt.mnt_flags & MNT_LOCKED))
 				continue;
-
 #endif
 			if (!S_ISDIR(inode->i_mode))
 				goto next;
