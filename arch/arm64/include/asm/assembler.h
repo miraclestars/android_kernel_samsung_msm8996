@@ -51,6 +51,15 @@
 	msr	daifclr, #2
 	.endm
 
+	.macro	save_and_disable_irq, flags
+	mrs	\flags, daif
+	msr	daifset, #2
+	.endm
+
+	.macro	restore_irq, flags
+	msr	daif, \flags
+	.endm
+
 /*
  * Save/disable and restore interrupts.
  */
