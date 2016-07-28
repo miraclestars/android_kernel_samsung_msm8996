@@ -56,6 +56,8 @@
 #include <linux/kcov.h>
 #include <linux/cpufreq.h>
 
+#include "sched/tune.h"
+
 #include <asm/uaccess.h>
 #include <asm/unistd.h>
 #include <asm/pgtable.h>
@@ -730,6 +732,8 @@ void do_exit(long code)
 	}
 
 	exit_signals(tsk);  /* sets PF_EXITING */
+
+	schedtune_exit_task(tsk);
 
 	sched_exit(tsk);
 
