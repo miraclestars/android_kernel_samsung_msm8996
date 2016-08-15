@@ -18,16 +18,17 @@
 
 #include <asm/cpu_ops.h>
 #include <asm/smp_plat.h>
+#include <linux/cache.h>
 #include <linux/errno.h>
 #include <linux/of.h>
 #include <linux/string.h>
 
-const struct cpu_operations *cpu_ops[NR_CPUS];
+const struct cpu_operations *cpu_ops[NR_CPUS] __ro_after_init;
 extern struct of_cpu_method __cpu_method_of_table[];
 static const struct of_cpu_method __cpu_method_of_table_sentinel
 	__used __section(__cpu_method_of_table_end);
 
-const struct cpu_operations * __init cpu_get_ops(const char *name)
+static const struct cpu_operations * __init cpu_get_ops(const char *name)
 {
 	struct of_cpu_method *m = __cpu_method_of_table;
 
