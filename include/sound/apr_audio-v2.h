@@ -45,6 +45,8 @@ struct param_outband {
 #define ADM_MATRIX_ID_AUDIO_TX              1
 
 #define ADM_MATRIX_ID_COMPRESSED_AUDIO_RX   2
+
+#define ADM_MATRIX_ID_LISTEN_TX             4
 /* Enumeration for an audio Tx matrix ID.*/
 #define ADM_MATRIX_ID_AUDIOX              1
 
@@ -8605,6 +8607,10 @@ struct avcs_fwk_ver_info {
 #define LSM_PARAM_ID_LAB_ENABLE				(0x00012C09)
 #define LSM_PARAM_ID_LAB_CONFIG				(0x00012C0A)
 #define LSM_MODULE_ID_FRAMEWORK				(0x00012C0E)
+#define LSM_PARAM_ID_SWMAD_CFG				(0x00012C18)
+#define LSM_PARAM_ID_SWMAD_MODEL			(0x00012C19)
+#define LSM_PARAM_ID_SWMAD_ENABLE			(0x00012C1A)
+#define LSM_PARAM_ID_POLLING_ENABLE			(0x00012C1B)
 
 /* HW MAD specific */
 #define AFE_MODULE_HW_MAD				(0x00010230)
@@ -9785,6 +9791,7 @@ enum {
 	LEGACY_PCM = 0,
 	COMPRESSED_PASSTHROUGH,
 	COMPRESSED_PASSTHROUGH_CONVERT,
+	LISTEN,
 };
 
 #define AUDPROC_MODULE_ID_COMPRESSED_MUTE                0x00010770
