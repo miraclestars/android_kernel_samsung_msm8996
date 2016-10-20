@@ -3480,9 +3480,6 @@ static int __init diagchar_init(void)
 	ret = diagfwd_init();
 	if (ret)
 		goto fail;
-	ret = diagfwd_bridge_init();
-	if (ret)
-		goto fail;
 	ret = diagfwd_cntl_init();
 	if (ret)
 		goto fail;
@@ -3513,6 +3510,9 @@ static int __init diagchar_init(void)
 		goto fail;
 
 	pr_debug("diagchar initialized now");
+	ret = diagfwd_bridge_init();
+	if (ret)
+		diagfwd_bridge_exit();
 	return 0;
 
 fail:
@@ -3528,6 +3528,7 @@ fail:
 	diag_masks_exit();
 	diag_remote_exit();
 	return -1;
+
 }
 
 static void diagchar_exit(void)
