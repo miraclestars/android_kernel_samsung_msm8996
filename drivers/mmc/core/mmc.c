@@ -2569,6 +2569,7 @@ static int mmc_suspend(struct mmc_host *host)
 	int err;
 	ktime_t start = ktime_get();
 
+	MMC_TRACE(host, "%s: Enter\n", __func__);
 	err = _mmc_suspend(host, true);
 	if (!err) {
 		pm_runtime_disable(&host->card->dev);
@@ -2577,6 +2578,7 @@ static int mmc_suspend(struct mmc_host *host)
 
 	trace_mmc_suspend(mmc_hostname(host), err,
 			ktime_to_us(ktime_sub(ktime_get(), start)));
+	MMC_TRACE(host, "%s: Exit err: %d\n", __func__, err);
 	return err;
 }
 
@@ -2652,6 +2654,7 @@ static int mmc_resume(struct mmc_host *host)
 	int err = 0;
 	ktime_t start = ktime_get();
 
+	MMC_TRACE(host, "%s: Enter\n", __func__);
 	if (!(host->caps & MMC_CAP_RUNTIME_RESUME)) {
 		err = _mmc_resume(host);
 		pm_runtime_set_active(&host->card->dev);
@@ -2661,7 +2664,7 @@ static int mmc_resume(struct mmc_host *host)
 
 	trace_mmc_resume(mmc_hostname(host), err,
 			ktime_to_us(ktime_sub(ktime_get(), start)));
-
+	MMC_TRACE(host, "%s: Exit err: %d\n", __func__, err);
 	return err;
 }
 
