@@ -456,8 +456,9 @@ static void fiq_debugger_help(struct fiq_debugger_state *state)
 			" console       Switch terminal to console\n"
 			" ps            Process list\n");
 #ifdef CONFIG_KGDB
-	fiq_debugger_printf(&state->output,
-				" kgdb          Enter kernel debugger\n");
+	if (fiq_kgdb_enable) {
+		fiq_debugger_printf(&state->output,
+			" kgdb          Enter kernel debugger\n");
 #endif
 }
 
