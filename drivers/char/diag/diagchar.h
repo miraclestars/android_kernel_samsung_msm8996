@@ -602,6 +602,7 @@ struct diagchar_dev {
 	uint8_t uses_time_api;
 	/* pid for diag_mdlog(CP silent log app) */
 	struct pid *silent_log_pid;
+	struct platform_device *pdev;
 };
 
 extern struct diagchar_dev *driver;
