@@ -1138,11 +1138,14 @@
 	};
 };
 
+&android_usb1 {
+	status = "ok";
+};
+
 &usb2s {
 	status = "ok";
-	dwc3@7600000 {
-		dr_mode = "host";
-	};
+	qcom,no-wakeup-src-in-hostmode;
+	qcom,psy-not-used;
 };
 
 &usb3 {
