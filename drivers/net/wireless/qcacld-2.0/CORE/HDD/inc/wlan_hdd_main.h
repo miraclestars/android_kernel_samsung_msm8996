@@ -1844,6 +1844,7 @@ struct hdd_context_s
     uint8_t max_mc_addr_list;
     struct acs_dfs_policy acs_policy;
     uint8_t max_peers;
+    uint8_t hdd_dfs_regdomain;
 };
 
 /*---------------------------------------------------------------------------
@@ -2034,12 +2035,6 @@ void wlan_hdd_cfg80211_link_layer_stats_init(hdd_context_t *pHddCtx);
 #endif
 
 void hdd_update_macaddr(hdd_config_t *cfg_ini, v_MACADDR_t hw_macaddr);
-
-/* Samsung specific code */
-#ifdef SEC_WRITE_VERSION_IN_FILE
-int wlan_hdd_sec_write_version_file (char *swversion);
-#endif /* SEC_WRITE_VERSION_IN_FILE */
-
 #if defined(FEATURE_WLAN_LFR) && defined(WLAN_FEATURE_ROAM_SCAN_OFFLOAD)
 void wlan_hdd_disable_roaming(hdd_adapter_t *pAdapter);
 void wlan_hdd_enable_roaming(hdd_adapter_t *pAdapter);
@@ -2052,10 +2047,10 @@ VOS_STATUS wlan_hdd_check_custom_con_channel_rules(hdd_adapter_t *sta_adapter,
                                               bool *concurrent_chnl_same);
 #ifdef WLAN_FEATURE_MBSSID
 void wlan_hdd_stop_sap(hdd_adapter_t *ap_adapter);
-void wlan_hdd_start_sap(hdd_adapter_t *ap_adapter);
+void wlan_hdd_start_sap(hdd_adapter_t *ap_adapter, bool reinit);
 #else
 static inline void wlan_hdd_stop_sap(hdd_adapter_t *ap_adapter) {}
-static inline void wlan_hdd_start_sap(hdd_adapter_t *ap_adapter) {}
+static inline void wlan_hdd_start_sap(hdd_adapter_t *ap_adapter, bool reinit) {}
 #endif
 int wlan_hdd_get_link_speed(hdd_adapter_t *sta_adapter, uint32_t *link_speed);
 int hdd_wlan_go_set_mcc_p2p_quota(hdd_adapter_t *hostapd_adapter,

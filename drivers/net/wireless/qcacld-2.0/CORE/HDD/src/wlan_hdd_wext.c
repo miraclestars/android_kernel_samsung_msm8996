@@ -450,9 +450,6 @@ static const hdd_freq_chan_map_t freq_chan_map[] = { {2412, 1}, {2417, 2},
 
 #define WLAN_GET_LINK_SPEED          (SIOCIWFIRSTPRIV + 31)
 
-#ifdef SEC_CONFIG_GRIP_POWER
-#define WLAN_SET_GRIP_PWR_CONFIG     (SIOCIWFIRSTPRIV + 33)
-#endif
 /* Private ioctls and their sub-ioctls */
 #define WLAN_PRIV_SET_TWO_INT_GET_NONE   (SIOCIWFIRSTPRIV + 28)
 #define WE_SET_SMPS_PARAM    1
@@ -885,16 +882,6 @@ void hdd_wlan_get_version(hdd_adapter_t *pAdapter, union iwreq_data *wrqu,
                                      CRMId,
                                      pHWversion);
     } else {
-#ifdef SEC_WRITE_VERSION_IN_FILE
-        tANI_U8 versionString[128];
-        scnprintf(versionString, 128,
-				"Host SW:%s, FW:%d.%d.%d.%d, HW:%s",
-				QWLAN_VERSIONSTR, MSPId, mSPId, SIId, CRMId, pHWversion);
-        if (!wlan_hdd_sec_write_version_file(versionString)) {
-			hddLog(VOS_TRACE_LEVEL_FATAL,
-					"%s: faild to write version info in the file",__func__);
-        }
-#endif /* SEC_WRITE_VERSION_IN_FILE */
         pr_info("Host SW:%s, FW:%d.%d.%d.%d, HW:%s\n",
                 QWLAN_VERSIONSTR,
                 MSPId,
@@ -8676,8 +8663,8 @@ static int __iw_set_var_ints_getnone(struct net_device *dev,
                         __func__, apps_args[0], apps_args[1], apps_args[2],
                         apps_args[3], apps_args[4]);
                 if (hHal)
-                    logPrintf(hHal, apps_args[0], apps_args[1], apps_args[2],
-                            apps_args[3], apps_args[4]);
+                    return logPrintf(hHal, apps_args[0], apps_args[1],
+                                     apps_args[2], apps_args[3], apps_args[4]);
 
             }
             break;
@@ -9965,11 +9952,12 @@ int wlan_hdd_setIPv6Filter(hdd_context_t *pHddCtx, tANI_U8 filterType,
  * @pAdapter: Adapter context
  * @set: flag to notify set/clear action on the multicast addr
  *
- * Returns: None
+ * Returns: 0 on success, errno on failure
  */
-void wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, v_U8_t set)
+int wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, v_U8_t set)
 {
     v_U8_t i;
+    int ret = 0;
     tpSirRcvFltMcAddrList pMulticastAddrs = NULL;
     tHalHandle hHal;
     hdd_context_t* pHddCtx = (hdd_context_t*)pAdapter->pHddCtx;
@@ -9977,26 +9965,26 @@ void wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, v_U8_t set)
 
     ENTER();
 
-    if (wlan_hdd_validate_context(pHddCtx))
-        return;
+    if ((ret = wlan_hdd_validate_context(pHddCtx)))
+        return ret;
 
     hHal = pHddCtx->hHal;
 
     if (NULL == hHal) {
         hddLog(VOS_TRACE_LEVEL_ERROR, FL("HAL Handle is NULL"));
-        return;
+        return -EINVAL;
     }
 
     if (!sta_ctx) {
         hddLog(LOGE, "sta_ctx is NULL");
-        return;
+        return -EINVAL;
     }
 
     if (pHddCtx->cfg_ini->fEnableMCAddrList) {
         pMulticastAddrs = vos_mem_malloc(sizeof(tSirRcvFltMcAddrList));
         if (NULL == pMulticastAddrs) {
             hddLog(VOS_TRACE_LEVEL_ERROR, FL("Could not allocate Memory"));
-            return;
+            return -ENOMEM;
         }
         vos_mem_zero(pMulticastAddrs, sizeof(tSirRcvFltMcAddrList));
         pMulticastAddrs->action = set;
@@ -10069,10 +10057,11 @@ void wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, v_U8_t set)
     } else {
         hddLog(VOS_TRACE_LEVEL_INFO,
                 FL("gMCAddrListEnable is not enabled in INI"));
+        return -EINVAL;
     }
 
     EXIT();
-    return;
+    return ret;
 }
 
 static int __iw_set_packet_filter_params(struct net_device *dev,
@@ -10372,8 +10361,9 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
      serialized by the kernel rtnl_lock and hence does not need to be
      reentrant */
   static tSirPNOScanReq pnoRequest;
-  char *ptr;
+  char *ptr, *data;
   v_U8_t i,j, ucParams, ucMode;
+  size_t len;
   /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
   VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
@@ -10396,10 +10386,10 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
     for each network:
     <ssid_len> <ssid> <authentication> <encryption>
     <ch_num> <channel_list optional> <bcast_type> <rssi_threshold>
-    <scan_timers> <scan_time> <scan_repeat> <scan_time> <scan_repeat>
+    <fast_scan_period> <fast_scan_cycles> <slow_scan_period> <pno_mode>
 
     e.g:
-    1 2 4 test 0 0 3 1 6 11 2 40 5 test2 4 4 6 1 2 3 4 5 6 1 0 2 5 2 300 0
+    1 2 4 test 0 0 3 1 6 11 2 40 5 test2 4 4 6 1 2 3 4 5 6 1 0 2 5 3 0
 
     this translates into:
     -----------------------------
@@ -10417,12 +10407,24 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
 
     scan every 5 seconds 2 times, scan every 300 seconds until stopped
   -----------------------------------------------------------------------*/
-  ptr = extra + nOffset;
 
-  if (1 != sscanf(ptr,"%hhu%n", &(pnoRequest.enable), &nOffset))
+  /* making sure argument string ends with '\0' */
+  len = (wrqu->data.length-nOffset) + 1;
+  data = vos_mem_malloc(len);
+  if (NULL == data) {
+      VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                FL("fail to allocate memory %zu"), len);
+      return -EINVAL;
+  }
+  vos_mem_zero(data, len);
+  vos_mem_copy(data, &extra[nOffset], (len-1));
+  ptr = data;
+
+  if (1 != sscanf(ptr," %hhu%n", &(pnoRequest.enable), &nOffset))
   {
       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                 "PNO enable input is not valid %s",ptr);
+      vos_mem_free(data);
       return -EINVAL;
   }
 
@@ -10433,15 +10435,17 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
     sme_SetPreferredNetworkList(WLAN_HDD_GET_HAL_CTX(pAdapter), &pnoRequest,
                                 pAdapter->sessionId,
                                 found_pref_network_cb, pAdapter);
+    vos_mem_free(data);
     return 0;
   }
 
   ptr += nOffset;
 
-  if (1 != sscanf(ptr,"%hhu %n", &(pnoRequest.ucNetworksCount), &nOffset))
+  if (1 != sscanf(ptr," %hhu %n", &(pnoRequest.ucNetworksCount), &nOffset))
   {
       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                 "PNO count input not valid %s",ptr);
+      vos_mem_free(data);
       return -EINVAL;
   }
 
@@ -10457,6 +10461,7 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
       ( pnoRequest.ucNetworksCount > SIR_PNO_MAX_SUPP_NETWORKS ))
   {
       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_WARN, "Network input is not correct");
+      vos_mem_free(data);
       return -EINVAL;
   }
 
@@ -10467,13 +10472,14 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
 
     pnoRequest.aNetworks[i].ssId.length = 0;
 
-    ucParams = sscanf(ptr,"%hhu %n",
+    ucParams = sscanf(ptr," %hhu %n",
                       &(pnoRequest.aNetworks[i].ssId.length),&nOffset);
 
     if (1 != ucParams)
     {
         VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                   "PNO ssid length input is not valid %s",ptr);
+        vos_mem_free(data);
         return -EINVAL;
     }
 
@@ -10483,6 +10489,7 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                 "SSID Len %d is not correct for network %d",
                 pnoRequest.aNetworks[i].ssId.length, i);
+      vos_mem_free(data);
       return -EINVAL;
     }
 
@@ -10493,7 +10500,7 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
            pnoRequest.aNetworks[i].ssId.length);
     ptr += pnoRequest.aNetworks[i].ssId.length;
 
-    ucParams = sscanf(ptr,"%u %u %hhu %n",
+    ucParams = sscanf(ptr," %u %u %hhu %n",
                       &(pnoRequest.aNetworks[i].authentication),
                       &(pnoRequest.aNetworks[i].encryption),
                       &(pnoRequest.aNetworks[i].ucChannelCount),
@@ -10503,6 +10510,7 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
     {
       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_WARN,
                 "Incorrect cmd %s",ptr);
+      vos_mem_free(data);
       return -EINVAL;
     }
 
@@ -10530,6 +10538,7 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
     {
       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_WARN,
                 "Incorrect number of channels");
+      vos_mem_free(data);
       return -EINVAL;
     }
 
@@ -10537,27 +10546,42 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
     {
       for ( j = 0; j < pnoRequest.aNetworks[i].ucChannelCount; j++)
       {
-           if (1 != sscanf(ptr,"%hhu %n",
+           if (1 != sscanf(ptr," %hhu %n",
                            &(pnoRequest.aNetworks[i].aChannels[j]),
                            &nOffset))
             {    VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                            "PNO network channel input is not valid %s",ptr);
+               vos_mem_free(data);
                return -EINVAL;
+            }
+            if (!IS_CHANNEL_VALID(pnoRequest.aNetworks[i].aChannels[j])) {
+                VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                          FL("invalid channel: %hhu"),
+                             pnoRequest.aNetworks[i].aChannels[j]);
+                vos_mem_free(data);
+                return -EINVAL;
             }
             /*Advance to next channel number*/
             ptr += nOffset;
       }
     }
 
-    if (1 != sscanf(ptr,"%u %n",
+    if (1 != sscanf(ptr," %u %n",
                     &(pnoRequest.aNetworks[i].bcastNetwType),
                     &nOffset))
     {
         VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                   "PNO broadcast network type input is not valid %s",ptr);
+        vos_mem_free(data);
         return -EINVAL;
     }
-
+    if (pnoRequest.aNetworks[i].bcastNetwType > 2) {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                  FL("invalid bcast nw type: %u"),
+                      pnoRequest.aNetworks[i].bcastNetwType);
+        vos_mem_free(data);
+        return -EINVAL;
+    }
     VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
             "PNO bcastNetwType %d offset %d",
             pnoRequest.aNetworks[i].bcastNetwType,
@@ -10565,12 +10589,13 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
 
     /*Advance to rssi Threshold*/
     ptr += nOffset;
-    if (1 != sscanf(ptr,"%d %n",
+    if (1 != sscanf(ptr," %d %n",
                     &(pnoRequest.aNetworks[i].rssiThreshold),
                     &nOffset))
     {
         VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                   "PNO rssi threshold input is not valid %s",ptr);
+        vos_mem_free(data);
         return -EINVAL;
     }
     VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
@@ -10587,6 +10612,8 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
   /*for LA we just expose suspend option*/
   if (( 1 != ucParams )||(  ucMode >= SIR_PNO_MODE_MAX ))
   {
+     VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                "fail to get valid pno mode %hhu %hhu", ucParams, ucMode);
      pnoRequest.modePNO = SIR_PNO_MODE_ON_SUSPEND;
   }
 
@@ -10594,6 +10621,7 @@ int iw_set_pno(struct net_device *dev, struct iw_request_info *info,
                                 pAdapter->sessionId,
                                 found_pref_network_cb, pAdapter);
 
+  vos_mem_free(data);
   return 0;
 }/*iw_set_pno*/
 
@@ -10795,77 +10823,6 @@ int hdd_setBand_helper(struct net_device *dev, const char *command)
     return hdd_setBand(dev, band);
 }
 
-#ifdef SEC_CONFIG_GRIP_POWER
-int hdd_setGripPwr(struct net_device *dev, u8 set_value)
-{
-    hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
-    tHalHandle hHal = WLAN_HDD_GET_HAL_CTX(pAdapter);
-    tSirTxPowerLimit *hddtxlimit;
-    hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
-    unsigned int pwr_2g, pwr_5g;
-    bool status = FALSE;
-    hddtxlimit = vos_mem_malloc(sizeof(tSirTxPowerLimit));
-    if (!hddtxlimit)
-    {
-        hddLog(VOS_TRACE_LEVEL_ERROR, "%s: Memory allocation for TxPowerLimit failed!",
-               __func__);
-        return -1;
-    }
-    if ( 0 == set_value ) // Restore
-    {
-        hddLog(VOS_TRACE_LEVEL_INFO, "%s: Restoring the original maximum tx power",
-                __func__);
-        hddtxlimit->txPower2g = pHddCtx->cfg_ini->TxPower2g;
-        hddtxlimit->txPower5g = pHddCtx->cfg_ini->TxPower5g;
-        if( sme_TxpowerLimit(hHal, hddtxlimit) !=
-            eHAL_STATUS_SUCCESS )
-        {
-            hddLog(VOS_TRACE_LEVEL_ERROR, "%s: Setting maximum tx power failed",
-            __func__);
-            return -1;
-        }
-    }
-    else if ( 1 == set_value ) // enable
-    {
-        extern bool wlan_hdd_sec_get_grip_power(unsigned int *grip_power_2g, unsigned int *grip_power_5g);
-        status = wlan_hdd_sec_get_grip_power(&pwr_2g, &pwr_5g);
-        if (status == FALSE)
-        {
-            hddLog(VOS_TRACE_LEVEL_ERROR, "%s: Can't get grip power", __func__);
-            vos_mem_free(hddtxlimit);
-            return -1;
-        }
-        hddLog(VOS_TRACE_LEVEL_INFO, "%s: Setting the configured tx power:%d %d dbm",
-                __func__, pwr_2g, pwr_5g);
-        hddtxlimit->txPower2g = pwr_2g;
-        hddtxlimit->txPower5g = pwr_5g;
-        if( sme_TxpowerLimit(hHal, hddtxlimit) !=
-            eHAL_STATUS_SUCCESS )
-        {
-            hddLog(VOS_TRACE_LEVEL_ERROR, "%s: Setting maximum tx power failed",
-                __func__);
-            return -1;
-        }
-     }
-     else
-     {
-         hddLog(LOGE, "Invalid arg  %d in WE_SET_SS_GRIP_TX_POWER", set_value);
-         return -1;
-     }
-     return 0;
-}
-int hdd_setGripPwr_helper(struct net_device *dev, const char *command)
-{
-    u8 tmp_set_value, set_value;
-	/*convert the set power value from ascii to integer*/
-    tmp_set_value = command[WLAN_HDD_UI_SET_GRIP_TX_PWR_VALUE_OFFSET] - '0';
-    if(tmp_set_value == 0) set_value =1 ;
-    else			   set_value = 0;
-    VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_FATAL,
-              "%s:tmp_set_value : %d, set_value : %d!!!", __func__, tmp_set_value, set_value);
-    return hdd_setGripPwr(dev, set_value);
-}
-#endif
 static int __iw_set_band_config(struct net_device *dev,
                                 struct iw_request_info *info,
                                 union iwreq_data *wrqu, char *extra)
@@ -10889,33 +10846,6 @@ static int __iw_set_band_config(struct net_device *dev,
 
     return hdd_setBand(dev, value[0]);
 }
-#ifdef SEC_CONFIG_GRIP_POWER
-static int __iw_set_grip_pwr_config(struct net_device *dev,
-                                    struct iw_request_info *info,
-                                    union iwreq_data *wrqu, char *extra)
-{
-    hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
-    int *value = (int *)extra;
-    VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO, "%s: ", __func__);
-    if ((WLAN_HDD_GET_CTX(pAdapter))->isLogpInProgress)
-    {
-        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_FATAL,
-                  "%s:LOGP in Progress. Ignore!!!", __func__);
-        return -EBUSY;
-    }
-    return hdd_setGripPwr(dev, value[0]);
-}
-static int iw_set_grip_pwr_config(struct net_device *dev,
-                                  struct iw_request_info *info,
-                                  union iwreq_data *wrqu, char *extra)
-{
-    int ret;
-    vos_ssr_protect(__func__);
-    ret = __iw_set_grip_pwr_config(dev, info, wrqu, extra);
-    vos_ssr_unprotect(__func__);
-    return ret;
-}
-#endif
 
 static int iw_set_band_config(struct net_device *dev,
                               struct iw_request_info *info,
@@ -11169,7 +11099,7 @@ static int __iw_set_two_ints_getnone(struct net_device *dev,
             tCsrRoamProfile roam_profile;
 
             hddLog(LOG1, "Set monitor mode Channel %d", value[1]);
-            hdd_select_cbmode(pAdapter, value[1], &vht_channel_width);
+            hdd_select_mon_cbmode(pAdapter, value[1], &vht_channel_width);
             roam_profile.ChannelInfo.ChannelList = &ch_info->channel;
             roam_profile.ChannelInfo.numOfChannels = 1;
             roam_profile.vht_channel_width = ch_info->channel_width;
@@ -11322,9 +11252,6 @@ static const iw_handler we_private[] = {
    [WLAN_GET_LINK_SPEED                 - SIOCIWFIRSTPRIV]   = iw_get_linkspeed_priv,
    [WLAN_PRIV_SET_TWO_INT_GET_NONE      - SIOCIWFIRSTPRIV]   = iw_set_two_ints_getnone,
    [WLAN_SET_DOT11P_CHANNEL_SCHED       - SIOCIWFIRSTPRIV]   = iw_set_dot11p_channel_sched,
-#ifdef SEC_CONFIG_GRIP_POWER
-   [WLAN_SET_GRIP_PWR_CONFIG            - SIOCIWFIRSTPRIV]   = iw_set_grip_pwr_config,
-#endif
 };
 
 /*Maximum command length can be only 15 */
@@ -12401,15 +12328,6 @@ static const struct iw_priv_args we_private_args[] = {
     {   WE_SET_FW_CRASH_INJECT,
         IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 2,
         0, "crash_inject" },
-#endif
-#ifdef SEC_CONFIG_GRIP_POWER
-/* set SS Grip Tx power
- * 1 = enable and 0 = disable */
-    {
-        WLAN_SET_GRIP_PWR_CONFIG,
-        IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1,
-        0,
-        "setGripTxPower" },
 #endif
     {   WE_SET_MON_MODE_CHAN,
         IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 2,
