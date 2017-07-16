@@ -70,9 +70,6 @@
 /* 012345678 */
 #define WLAN_HDD_UI_SET_BAND_VALUE_OFFSET              8
 
-#ifdef SEC_CONFIG_GRIP_POWER
-#define WLAN_HDD_UI_SET_GRIP_TX_PWR_VALUE_OFFSET       21
-#endif
 typedef enum
 {
    HDD_WLAN_WMM_DIRECTION_UPSTREAM      = 0,
@@ -463,7 +460,7 @@ VOS_STATUS iw_set_tdls_params(struct net_device *dev, struct iw_request_info *in
 #endif
 
 #ifdef WLAN_FEATURE_PACKET_FILTERING
-void wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, v_U8_t set);
+int wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, v_U8_t set);
 #endif
 void* wlan_hdd_change_country_code_callback(void *pAdapter);
 
@@ -481,8 +478,4 @@ int process_wma_set_command_twoargs(int sessid, int paramid,
 void hdd_GetTemperatureCB(int temperature, void *pContext);
 VOS_STATUS wlan_hdd_get_temperature(hdd_adapter_t *pAdapter,
         union iwreq_data *wrqu, char *extra);
-#ifdef SEC_CONFIG_GRIP_POWER
-int hdd_setGripPwr(struct net_device *dev, u8 set_value);
-int hdd_setGripPwr_helper(struct net_device *dev, const char *command);
-#endif
 #endif // __WEXT_IW_H__

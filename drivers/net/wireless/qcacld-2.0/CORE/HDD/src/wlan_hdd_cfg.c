@@ -60,13 +60,6 @@
 #include <pmcApi.h>
 #include <wlan_hdd_misc.h>
 
-#ifdef SEC_CONFIG_PSM
-unsigned int wlan_hdd_sec_get_psm(unsigned int original_value);
-#endif /* SEC_CONFIG_PSM */
-
-#ifdef SEC_CONFIG_GRIP_POWER
-bool wlan_hdd_sec_get_grip_power(unsigned int *grip_power_2g, unsigned int *grip_power_5g);
-#endif
 #if  defined (WLAN_FEATURE_VOWIFI_11R) || defined (FEATURE_WLAN_ESE) || defined(FEATURE_WLAN_LFR)
 static void
 cbNotifySetRoamPrefer5GHz(hdd_context_t *pHddCtx, unsigned long NotifyId)
@@ -4646,12 +4639,12 @@ REG_TABLE_ENTRY g_registry_table[] =
                 CFG_TGT_GTX_USR_CFG_MIN,
                 CFG_TGT_GTX_USR_CFG_MAX),
 
-   REG_VARIABLE(CFG_CH_AVOID_SAP_RESTART_NAME, WLAN_PARAM_Integer,
-                hdd_config_t, sap_restrt_ch_avoid,
+   REG_VARIABLE(CFG_SAP_INTERNAL_RESTART_NAME, WLAN_PARAM_Integer,
+                hdd_config_t, sap_internal_restart,
                 VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
-                CFG_CH_AVOID_SAP_RESTART_DEFAULT,
-                CFG_CH_AVOID_SAP_RESTART_MIN,
-                CFG_CH_AVOID_SAP_RESTART_MAX),
+                CFG_SAP_INTERNAL_RESTART_DEFAULT,
+                CFG_SAP_INTERNAL_RESTART_MIN,
+                CFG_SAP_INTERNAL_RESTART_MAX),
 
    REG_VARIABLE(CFG_BUG_ON_REINIT_FAILURE_NAME, WLAN_PARAM_Integer,
                 hdd_config_t, bug_on_reinit_failure,
@@ -4796,30 +4789,6 @@ typedef struct
    char *value;
 }tCfgIniEntry;
 
-#ifdef SEC_CONFIG_GRIP_POWER
-#define SEC_GRIPPOWER_FILEPATH	"/etc/firmware/wlan/qca_cld/grippower.info"
-bool wlan_hdd_sec_get_grip_power(unsigned int *grip_power_2g, unsigned int *grip_power_5g)
-{
-    struct file *fp    = NULL;
-    char *filepath     = SEC_GRIPPOWER_FILEPATH;
-    char buf[16]        = {0};
-    int i;
-    bool status      = FALSE;
-    for (i = 0; i < 5; ++i) {
-        fp = filp_open(filepath, O_RDONLY, 0);
-        if (!IS_ERR(fp)) {
-            kernel_read(fp, 0, buf, 5);
-            sscanf(buf, "%d:%d", (unsigned int *)grip_power_2g, (unsigned int *)grip_power_5g);
-            printk("[WIFI] GRIPPOWER: [%u:%u]\n", *grip_power_2g, *grip_power_5g);
-            status = TRUE;
-            break;
-        }
-    }
-    if (fp && !IS_ERR(fp))
-        filp_close(fp, NULL);
-    return status;
-}
-#endif
 static VOS_STATUS hdd_apply_cfg_ini( hdd_context_t * pHddCtx,
     tCfgIniEntry* iniTable, unsigned long entries);
 
@@ -5266,11 +5235,7 @@ void print_hdd_cfg(hdd_context_t *pHddCtx)
   VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH, "Name = [overrideCountryCode] Value = [%s] ",pHddCtx->cfg_ini->overrideCountryCode);
   VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH, "Name = [gAllowDFSChannelRoam] Value = [%u] ",pHddCtx->cfg_ini->allowDFSChannelRoam);
   hddLog(VOS_TRACE_LEVEL_INFO_HIGH, "Name = [gMaxConcurrentActiveSessions] Value = [%u] ", pHddCtx->cfg_ini->gMaxConcurrentActiveSessions);
-#ifdef SEC_CONFIG_ANTENNA_CONTROL
-  VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH, "Name = [gEnable2x2] Value = [%u] ",pHddCtx->cfg_ini->enable2x2);
-  VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH, "Name = [gSetTxChainmask1x1] Value = [%u] ",pHddCtx->cfg_ini->txchainmask1x1);
-  VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH, "Name = [gSetRxChainmask1x1] Value = [%u] ",pHddCtx->cfg_ini->rxchainmask1x1);
-#endif
+
 #ifdef FEATURE_BUS_BANDWIDTH
   VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH,
           "Name = [gBusBandwidthHighThreshold] Value = [%u] ",
@@ -5557,8 +5522,8 @@ void print_hdd_cfg(hdd_context_t *pHddCtx)
                  pHddCtx->cfg_ini->tgt_gtx_usr_cfg);
 
   hddLog(LOG2, "Name = [%s] Value = [%u]",
-                 CFG_CH_AVOID_SAP_RESTART_NAME,
-                 pHddCtx->cfg_ini->sap_restrt_ch_avoid);
+                 CFG_SAP_INTERNAL_RESTART_NAME,
+                 pHddCtx->cfg_ini->sap_internal_restart);
 
   hddLog(LOG2, "Name = [%s] Value = [%u]",
                 CFG_SAP_FORCE_11N_FOR_11AC_NAME,
@@ -5847,34 +5812,6 @@ config_exit:
    return vos_status;
 }
 
-#ifdef SEC_CONFIG_PSM
-#define SEC_PSM_FILEPATH		"/data/misc/conn/.psm.info"
-
-unsigned int wlan_hdd_sec_get_psm(unsigned int original_value)
-{
-	struct file *fp		= NULL;
-	char *filepath		= SEC_PSM_FILEPATH;
-	int i;
-	int value = 0;
-
-	for (i = 0; i < 5; ++i) {
-		fp = filp_open(filepath, O_RDONLY, 0);
-		if (!IS_ERR(fp)) {
-			//kernel_read(fp, fp->f_pos, &value, 1);
-			kernel_read(fp, 0, (char*)&value, 1);
-			printk("[WIFI] PSM: [%u]\n", value);
-			if (value == '0')
-				original_value = value - '0';
-			break;
-		}
-	}
-	if (fp && !IS_ERR(fp))
-		filp_close(fp, NULL);
-
-	return original_value;
-}
-#endif /* SEC_CONFIG_PSM */
-
 static VOS_STATUS hdd_apply_cfg_ini( hdd_context_t *pHddCtx, tCfgIniEntry* iniTable, unsigned long entries)
 {
    VOS_STATUS match_status = VOS_STATUS_E_FAILURE;
@@ -5892,11 +5829,6 @@ static VOS_STATUS hdd_apply_cfg_ini( hdd_context_t *pHddCtx, tCfgIniEntry* iniTa
    v_U32_t cbOutString;
    int i;
    int rv;
-#ifdef SEC_CONFIG_ANTENNA_CONTROL
-   int status;
-   const struct firmware *fw = NULL;
-   int ant_info = 0;
-#endif
 
    if (MAX_CFG_INI_ITEMS < cRegTableEntries) {
       hddLog(LOGE, FL("MAX_CFG_INI_ITEMS too small, must be at least %ld"),
@@ -5979,22 +5911,6 @@ static VOS_STATUS hdd_apply_cfg_ini( hdd_context_t *pHddCtx, tCfgIniEntry* iniTa
                value = pRegEntry->VarDefault;
             }
          }
-
-#ifdef SEC_CONFIG_PSM
-		 if (!strcmp(pRegEntry->RegName, CFG_ENABLE_IMPS_NAME) || !strcmp(pRegEntry->RegName, CFG_ENABLE_BMPS_NAME)) {
-			 printk("[WIFI] %s: original_value  = %u", pRegEntry->RegName, value);
-			 value = wlan_hdd_sec_get_psm(value);
-			 printk("[WIFI] %s: sec_control_psm = %u", pRegEntry->RegName, value);
-		 }
-		 // newly added for LFR enabling,disabling.
-		 if (!strcmp(pRegEntry->RegName, CFG_LFR_FEATURE_ENABLED_NAME) ||
-				 !strcmp(pRegEntry->RegName, CFG_FAST_TRANSITION_ENABLED_NAME) ||
-				 !strcmp(pRegEntry->RegName, CFG_FW_RSSI_MONITORING_NAME)) {
-			 printk("[WIFI] %s: original_value  = %u", pRegEntry->RegName, value);
-			 value = wlan_hdd_sec_get_psm(value);
-			 printk("[WIFI] %s: sec_control_psm = %u", pRegEntry->RegName, value);
-		 }
-#endif /* SEC_CONFIG_PSM */
 
          // Move the variable into the output field.
          memcpy( pField, &value, pRegEntry->VarSize );
@@ -6133,28 +6049,6 @@ static VOS_STATUS hdd_apply_cfg_ini( hdd_context_t *pHddCtx, tCfgIniEntry* iniTa
       }
    }
 
-#ifdef SEC_CONFIG_ANTENNA_CONTROL
-   status = request_firmware(&fw, WLAN_ANT_INFO_FILE, pHddCtx->parent_dev);
-   if(status)
-   {
-      hddLog(VOS_TRACE_LEVEL_FATAL, "%s: request_firmware failed .ant.info %d\n", __func__, status);
-      goto ant_fail;
-   }
-   if (!fw || !fw->data || !fw->size)
-   {
-      hddLog(VOS_TRACE_LEVEL_FATAL, "%s: invalid .ant.info file\n", __func__);
-      goto ant_fail;
-   }
-   ant_info = (int)fw->data[0] - '0';
-   hddLog(VOS_TRACE_LEVEL_FATAL, "ant.info = %d\n", ant_info);
-   if (ant_info == 1 || ant_info == 2) {
-		pHddCtx->cfg_ini->enable2x2 = 0;
-		pHddCtx->cfg_ini->txchainmask1x1 = ant_info;
-		pHddCtx->cfg_ini->rxchainmask1x1 = ant_info;
-   }
-   ant_fail:
-   release_firmware(fw);
-#endif
    print_hdd_cfg(pHddCtx);
 
    return( ret_status );

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1140,18 +1140,18 @@ int wlan_hdd_validate_context(hdd_context_t *pHddCtx)
 {
 
     if (NULL == pHddCtx || NULL == pHddCtx->cfg_ini) {
-        hddLog(LOGE, FL("%pS HDD context is Null"), (void *)_RET_IP_);
+        hddLog(LOG1, FL("%pS HDD context is Null"), (void *)_RET_IP_);
         return -ENODEV;
     }
 
     if (pHddCtx->isLogpInProgress) {
-        hddLog(LOGE, FL("%pS LOGP in Progress. Ignore!!!"), (void *)_RET_IP_);
+        hddLog(LOG1, FL("%pS LOGP in Progress. Ignore!!!"), (void *)_RET_IP_);
         return -EAGAIN;
     }
 
     if ((pHddCtx->isLoadInProgress) ||
         (pHddCtx->isUnloadInProgress)) {
-        hddLog(LOGE,
+        hddLog(LOG1,
              FL("%pS Unloading/Loading in Progress. Ignore!!!"),
              (void *)_RET_IP_);
         return -EAGAIN;
@@ -1395,7 +1395,7 @@ static int hdd_parse_setrmcrate_command(tANI_U8 *pValue,
         return 0;
     }
 
-    sscanf(inPtr, "%32s ", buf);
+    sscanf(inPtr, "%31s ", buf);
     v = kstrtos32(buf, 10, &tempInt);
     if ( v < 0)
     {
@@ -4606,6 +4606,8 @@ static int hdd_set_rx_filter(hdd_adapter_t *adapter, bool action,
 				    MAC_ADDR_ARRAY(filter->multicastAddr[j]));
 				j++;
 			}
+			if (j == SIR_MAX_NUM_MULTICAST_ADDRESS)
+				break;
 		}
 		filter->ulMulticastAddrCnt = j;
 		/* Set rx filter */
@@ -5327,22 +5329,6 @@ static int hdd_driver_command(hdd_adapter_t *pAdapter,
            /* Change band request received */
            ret = hdd_setBand_helper(pAdapter->dev, ptr);
        }
-#ifdef SEC_CONFIG_GRIP_POWER
-       else if(strncmp(command, "SET_TX_POWER_CALLING", 20) == 0)
-       {
-           tANI_U8 *ptr = command ;
-           /* Change band request received */
-
-           /* First 8 bytes will have "SETBAND " and
-            * 9 byte will have band setting value */
-           VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
-                     "%s: SetGripPower Info  comm %s UL %d, TL %d", __func__, command, priv_data.used_len, priv_data.total_len);
-           ret = hdd_setGripPwr_helper(pAdapter->dev, ptr);
-           if(ret < 0)
-               VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
-                          "%s: failed to setGripPwr ret=%d", __func__, ret);
-       }
-#endif
        else if (strncmp(command, "SETWMMPS", 8) == 0)
        {
            tANI_U8 *ptr = command;
@@ -6361,7 +6347,7 @@ static int hdd_driver_command(hdd_adapter_t *pAdapter,
                                                    pAdapter->sessionId,
                                                    nOpportunisticThresholdDiff);
        }
-       else if (strncmp(priv_data.buf, "GETOPPORTUNISTICRSSIDIFF", 24) == 0)
+       else if (strncmp(command, "GETOPPORTUNISTICRSSIDIFF", 24) == 0)
        {
            tANI_S8 val = sme_GetRoamOpportunisticScanThresholdDiff(
                                                                  pHddCtx->hHal);
@@ -6404,7 +6390,7 @@ static int hdd_driver_command(hdd_adapter_t *pAdapter,
                                      pAdapter->sessionId,
                                      nRoamRescanRssiDiff);
        }
-       else if (strncmp(priv_data.buf, "GETROAMRESCANRSSIDIFF", 21) == 0)
+       else if (strncmp(command, "GETROAMRESCANRSSIDIFF", 21) == 0)
        {
            tANI_U8 val = sme_GetRoamRescanRssiDiff(pHddCtx->hHal);
            char extra[32];
@@ -8173,7 +8159,7 @@ static void hdd_update_tgt_services(hdd_context_t *hdd_ctx,
     cfg_ini->fEnableTDLSSupport &= cfg->en_tdls;
     cfg_ini->fEnableTDLSOffChannel = cfg_ini->fEnableTDLSOffChannel &&
                                      cfg->en_tdls_offchan;
-    cfg_ini->fEnableTDLSBufferSta = cfg_ini->fEnableTDLSOffChannel &&
+    cfg_ini->fEnableTDLSBufferSta = cfg_ini->fEnableTDLSBufferSta &&
                                     cfg->en_tdls_uapsd_buf_sta;
     if (cfg_ini->fTDLSUapsdMask && cfg->en_tdls_uapsd_sleep_sta)
     {
@@ -9829,125 +9815,6 @@ static int hdd_set_mac_address(struct net_device *dev, void *addr)
 	return ret;
 }
 
-#ifdef SEC_READ_MACADDR
-
-#define SEC_MAC_FILEPATH	"/efs/wifi/.mac.info"
-
-v_MACADDR_t sec_mac_addrs[VOS_MAX_CONCURRENCY_PERSONA];
-static int sec_mac_loaded = 0;
-
-static int wlan_hdd_read_mac_addr(unsigned char *mac);
-
-unsigned char* wlan_hdd_sec_get_mac_addr(int i)
-{
-	tSirMacAddr customMacAddr;
-	if (!sec_mac_loaded) {
-		// station mac
-		if (wlan_hdd_read_mac_addr(sec_mac_addrs[0].bytes) < 0)
-			return NULL;	// Cannot read MAC
-
-		// hotspot mac == sta mac
-		memcpy(&sec_mac_addrs[1].bytes[0], &sec_mac_addrs[0].bytes[0], 6);
-		sec_mac_addrs[1].bytes[0] |= 2;
-
-		// p2p mac
-		memcpy(&sec_mac_addrs[2].bytes[0], &sec_mac_addrs[0].bytes[0], 6);
-		sec_mac_addrs[2].bytes[0] |= 4;
-
-		// monitor mac == sta mac
-		memcpy(&sec_mac_addrs[3].bytes[0], &sec_mac_addrs[0].bytes[0], 6);
-		sec_mac_addrs[3].bytes[0] |= 8;
-		
-		vos_mem_copy(&customMacAddr, &sec_mac_addrs[0].bytes[0], sizeof(tSirMacAddr));
-		sme_SetCustomMacAddr(customMacAddr);
-
-		sec_mac_loaded = 1;
-	}
-
-	return sec_mac_addrs[i].bytes;
-}
-
-static int wlan_hdd_read_mac_addr(unsigned char *mac)
-{
-	struct file *fp      = NULL;
-	char macbuffer[18]   = {0};
-	mm_segment_t oldfs   = {0};
-	char randommac[3]    = {0};
-	char buf[18]         = {0};
-	char *filepath       = SEC_MAC_FILEPATH;
-	int ret = 0;
-	int i;
-	int create_random_mac = 0;
-	struct dentry *parent;
-	struct dentry *dentry;
-	struct inode *p_inode;
-	struct inode *c_inode;
-
-	for (i = 0; i < 5; ++i) {
-		fp = filp_open(filepath, O_RDONLY, 0);
-		if (IS_ERR(fp) || create_random_mac ==1) {
-			/* File Doesn't Exist. Create and write mac addr.*/
-			fp = filp_open(filepath, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR|S_IWUSR);
-			if (IS_ERR(fp)) {
-				printk("[WIFI] %s: cannot create a file\n", filepath);
-				return -1;
-			}
-			oldfs = get_fs();
-			set_fs(get_ds());
-			/* set uid , gid of parent directory */
-			dentry = fp->f_path.dentry;
-			parent = dget_parent(dentry);
-			c_inode = dentry->d_inode;
-			p_inode = parent->d_inode;
-			c_inode->i_uid = p_inode->i_uid;
-			c_inode->i_gid = p_inode->i_gid;
-
-			/* Generating the Random Bytes for 3 last octects of the MAC address */
-			get_random_bytes(randommac, 3);
-
-			sprintf(macbuffer, "%02X:%02X:%02X:%02X:%02X:%02X\n",
-						0x00, 0x12, 0x34, randommac[0], randommac[1], randommac[2]);
-			//printk("[WIFI] The randomly generated MAC ID: %s", macbuffer);
-
-			if (fp->f_mode & FMODE_WRITE) {
-				ret = fp->f_op->write(fp, (const char *)macbuffer, sizeof(macbuffer), &fp->f_pos);
-				if (ret < 0)
-					printk("[WIFI] MAC write to %s is failed: %s", filepath, macbuffer);
-				else
-					printk("[WIFI] MAC write to %s is success: %s", filepath, macbuffer);
-			}
-			set_fs(oldfs);
-		}
-
-		/* Reading the MAC Address from .mac.info file (the existed file or just created file)*/
-		ret = kernel_read(fp, 0, buf, 17);
-		buf[17] = '\0';   // to prevent abnormal string display when mac address is displayed on the screen.
-		//printk("[WIFI] Read MAC: [%s]\n", buf);
-
-		if (ret != 17 || strncmp(buf, "00:00:00:00:00:00", 17) == 0) {
-			filp_close(fp, NULL);
-			create_random_mac = 1;
-			continue;// Retry!
-		}
-
-		break;	// Read MAC is success
-	}
-
-	if (fp)
-		filp_close(fp, NULL);
-
-	if (ret) {
-		sscanf(buf, "%02X:%02X:%02X:%02X:%02X:%02X",
-			   (unsigned int *)&(mac[0]), (unsigned int *)&(mac[1]),
-			   (unsigned int *)&(mac[2]), (unsigned int *)&(mac[3]),
-			   (unsigned int *)&(mac[4]), (unsigned int *)&(mac[5]));
-		return 0;	// success
-	}
-
-	printk("[WIFI] Reading MAC from the '%s' is failed.\n", filepath);
-	return -1;	// failed
-}
-#endif /* SEC_READ_MACADDR */
 tANI_U8* wlan_hdd_get_intf_addr(hdd_context_t* pHddCtx)
 {
    int i;
@@ -9961,38 +9828,15 @@ tANI_U8* wlan_hdd_get_intf_addr(hdd_context_t* pHddCtx)
       return NULL;
 
    pHddCtx->cfg_ini->intfAddrMask |= (1 << i);
-#ifdef SEC_READ_MACADDR
-   {
-	   tANI_U8* addr = wlan_hdd_sec_get_mac_addr(i);
-	   printk("Assigned Interface Index %d\n",i);
-	   if (addr != NULL)
-		   return addr;
-   }
-#endif /* SEC_READ_MACADDR */
-
    return &pHddCtx->cfg_ini->intfMacAddr[i].bytes[0];
 }
 
 void wlan_hdd_release_intf_addr(hdd_context_t* pHddCtx, tANI_U8* releaseAddr)
 {
    int i;
-#ifdef SEC_READ_MACADDR
-   tANI_U8* addr;
-#endif /* SEC_READ_MACADDR */
-
    for ( i = 0; i < VOS_MAX_CONCURRENCY_PERSONA; i++)
    {
-#ifdef SEC_READ_MACADDR
-	   addr = wlan_hdd_sec_get_mac_addr(i);
-
-	   if (NULL == addr) {
-		   addr =
-			   &pHddCtx->cfg_ini->intfMacAddr[i].bytes[0];
-	   }
-	   if ( !memcmp(releaseAddr, addr, 6) )
-#else
       if ( !memcmp(releaseAddr, &pHddCtx->cfg_ini->intfMacAddr[i].bytes[0], 6) )
-#endif /* SEC_READ_MACADDR */
       {
          pHddCtx->cfg_ini->intfAddrMask &= ~(1 << i);
          break;
@@ -10030,7 +9874,11 @@ static void __hdd_set_multicast_list(struct net_device *dev)
 
    /* Delete already configured multicast address list */
    if (0 < pAdapter->mc_addr_list.mc_cnt)
-      wlan_hdd_set_mc_addr_list(pAdapter, false);
+      if (wlan_hdd_set_mc_addr_list(pAdapter, false)) {
+           hddLog(VOS_TRACE_LEVEL_ERROR, FL("failed to clear mc addr list"));
+           return;
+      }
+
 
    if (dev->flags & IFF_ALLMULTI)
    {
@@ -10087,7 +9935,8 @@ static void __hdd_set_multicast_list(struct net_device *dev)
    }
 
    /* Configure the updated multicast address list */
-   wlan_hdd_set_mc_addr_list(pAdapter, true);
+   if (wlan_hdd_set_mc_addr_list(pAdapter, true))
+       hddLog(VOS_TRACE_LEVEL_INFO, FL("failed to set mc addr list"));
 
    EXIT();
    return;
@@ -11151,7 +11000,7 @@ hdd_adapter_t* hdd_open_adapter( hdd_context_t *pHddCtx, tANI_U8 session_type,
          pAdapter->device_mode = session_type;
 
          hdd_initialize_adapter_common(pAdapter);
-         status = hdd_init_ap_mode(pAdapter);
+         status = hdd_init_ap_mode(pAdapter, false);
          if( VOS_STATUS_SUCCESS != status )
             goto err_free_netdev;
 
@@ -11847,10 +11696,24 @@ VOS_STATUS hdd_reset_all_adapters( hdd_context_t *pHddCtx )
    while ( NULL != pAdapterNode && VOS_STATUS_SUCCESS == status )
    {
       pAdapter = pAdapterNode->pAdapter;
+
       hddLog(LOG1, FL("Disabling queues"));
-      wlan_hdd_netif_queue_control(pAdapter,
-          WLAN_NETIF_TX_DISABLE_N_CARRIER,
-          WLAN_CONTROL_PATH);
+
+      if (pHddCtx->cfg_ini->sap_internal_restart &&
+          pAdapter->device_mode == WLAN_HDD_SOFTAP) {
+          hddLog(LOG1, FL("driver supports sap restart"));
+          vos_flush_work(&pHddCtx->sap_start_work);
+          wlan_hdd_netif_queue_control(pAdapter,
+                                 WLAN_NETIF_TX_DISABLE,
+                                  WLAN_CONTROL_PATH);
+          hdd_sap_indicate_disconnect_for_sta(pAdapter);
+          hdd_cleanup_actionframe(pHddCtx, pAdapter);
+          hdd_sap_destroy_events(pAdapter);
+
+      } else
+          wlan_hdd_netif_queue_control(pAdapter,
+              WLAN_NETIF_TX_DISABLE_N_CARRIER,
+              WLAN_CONTROL_PATH);
 
       pAdapter->sessionCtx.station.hdd_ReassocScenario = VOS_FALSE;
 
@@ -12069,7 +11932,17 @@ VOS_STATUS hdd_start_all_adapters( hdd_context_t *pHddCtx )
             break;
 
          case WLAN_HDD_SOFTAP:
-            /* softAP can handle SSR */
+            if (pHddCtx->cfg_ini->sap_internal_restart) {
+                hdd_init_ap_mode(pAdapter, true);
+
+#ifdef QCA_LL_TX_FLOW_CT
+                WLANTL_RegisterTXFlowControl(pHddCtx->pvosContext,
+                          hdd_softap_tx_resume_cb,
+                          pAdapter->sessionId,
+                          (void *)pAdapter);
+#endif
+
+            }
             break;
 
          case WLAN_HDD_P2P_GO:
@@ -13545,41 +13418,6 @@ void hdd_prevent_suspend_timeout(v_U32_t timeout, uint32_t reason)
                                       reason);
 }
 
-// write version info in /data/misc/conn/.wifiver.info
-#ifdef SEC_WRITE_VERSION_IN_FILE
-#include "qwlan_version.h"
-
-#define SEC_VERSION_FILEPATH	"/data/misc/conn/.wifiver.info"
-
-int wlan_hdd_sec_write_version_file(char *swversion)
-{
-	int ret = 0;
-	struct file *fp = NULL;
-	char strbuffer[128]   = {0};
-	mm_segment_t oldfs   = {0};
-
-	oldfs = get_fs();
-	set_fs(get_ds());
-
-	fp = filp_open(SEC_VERSION_FILEPATH, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR|S_IWUSR);
-	if (IS_ERR(fp)) {
-		printk("%s: can't create file : %s\n",__func__,SEC_VERSION_FILEPATH);
-	} else {
-		if (fp->f_mode & FMODE_WRITE) {
-			snprintf(strbuffer,sizeof(strbuffer),"%s\n", swversion);
-			if (vfs_write(fp, strbuffer, strlen(strbuffer), &fp->f_pos) < 0)
-				printk("%s: can't write file : %s",__func__,SEC_VERSION_FILEPATH);
-			else
-				ret = 1;
-		}
-	}
-	if (fp && (!IS_ERR(fp)))
-		filp_close(fp, NULL);
-	set_fs(oldfs);
-	return ret;
-}
-#endif /* SEC_WRITE_VERSION_IN_FILE */
-
 /**
  * hdd_wlan_wakelock_create() -Create wakelock named as wlan
  *
@@ -13779,6 +13617,24 @@ VOS_STATUS hdd_set_sme_chan_list(hdd_context_t *hdd_ctx)
 {
     return sme_init_chan_list(hdd_ctx->hHal, hdd_ctx->reg.alpha2,
                               hdd_ctx->reg.cc_src);
+}
+
+void hdd_set_dfs_regdomain(hdd_context_t *phddctx, bool restore)
+{
+    if(!restore) {
+        if (vos_nv_get_dfs_region(&phddctx->hdd_dfs_regdomain)) {
+             hddLog(VOS_TRACE_LEVEL_FATAL,
+                    "%s: unable to retrieve dfs region from hdd",
+                    __func__);
+        }
+    }
+    else {
+        if (vos_nv_set_dfs_region(phddctx->hdd_dfs_regdomain)) {
+             hddLog(VOS_TRACE_LEVEL_FATAL,
+                    "%s: unable to set dfs region",
+                    __func__);
+        }
+    }
 }
 
 /**
@@ -15348,19 +15204,6 @@ int hdd_wlan_startup(struct device *dev, v_VOID_t *hif_sc)
 #ifdef WLAN_OPEN_P2P_INTERFACE
       /* Open P2P device interface */
       if (pAdapter != NULL) {
-#ifdef SEC_READ_MACADDR
-		  tANI_U8* p2p_dev_addr = wlan_hdd_get_intf_addr(pHddCtx);
-		  if (p2p_dev_addr != NULL) {
-			  vos_mem_copy(&pHddCtx->p2pDeviceAddress.bytes[0],
-					  p2p_dev_addr, VOS_MAC_ADDR_SIZE);
-
-			  if ( pHddCtx->cfg_ini->isP2pDeviceAddrAdministrated) {
-				  /* Generate the P2P Device Address.  This consists of the device's primary
-				   * MAC address with the locally administered bit set.
-				   */
-				  pHddCtx->p2pDeviceAddress.bytes[0] |= 0x02;
-			  }
-#else
          if (pHddCtx->cfg_ini->isP2pDeviceAddrAdministrated &&
              !(pHddCtx->cfg_ini->intfMacAddr[0].bytes[0] & 0x02)) {
             vos_mem_copy(pHddCtx->p2pDeviceAddress.bytes,
@@ -15371,7 +15214,6 @@ int hdd_wlan_startup(struct device *dev, v_VOID_t *hif_sc)
              * primary MAC address with the locally administered bit set.
              */
             pHddCtx->p2pDeviceAddress.bytes[0] |= 0x02;
-#endif /* SEC_READ_MACADDR */
          } else {
             uint8_t* p2p_dev_addr = wlan_hdd_get_intf_addr(pHddCtx);
             if (p2p_dev_addr != NULL) {
@@ -16293,13 +16135,6 @@ static int fwpath_changed_handler(const char *kmessage,
 		strlcpy(fwpath_mode_local, kmessage,
 			sizeof(fwpath_mode_local));
 
-		if (!strncmp(fwpath_mode_local, "ftm", 3)) {
-			pr_info("%s : ftm mode\n", __func__);
-			con_mode = 5;
-		} else {
-			pr_info("%s : mission mode\n", __func__);
-			con_mode = 0;
-		}
 		ready = vos_is_load_unload_ready(__func__);
 
 		if (!ready) {
@@ -17004,11 +16839,17 @@ void hdd_unsafe_channel_restart_sap(hdd_context_t *hdd_ctx)
 						NULL,
 						0);
 
-				hdd_hostapd_stop(adapter->dev);
-
-				if (hdd_ctx->cfg_ini->sap_restrt_ch_avoid)
+				hddLog(LOG1, FL("driver to start sap: %d"),
+					hdd_ctx->cfg_ini->sap_internal_restart);
+				if (hdd_ctx->cfg_ini->sap_internal_restart) {
+					wlan_hdd_netif_queue_control(adapter,
+							WLAN_NETIF_TX_DISABLE,
+							WLAN_CONTROL_PATH);
 					schedule_work(
 					&hdd_ctx->sap_start_work);
+				}
+				else
+					hdd_hostapd_stop(adapter->dev);
 
 				return;
 			}
@@ -17912,7 +17753,7 @@ void wlan_hdd_stop_sap(hdd_adapter_t *ap_adapter)
  *
  * Return: void.
  */
-void wlan_hdd_start_sap(hdd_adapter_t *ap_adapter)
+void wlan_hdd_start_sap(hdd_adapter_t *ap_adapter, bool reinit)
 {
     hdd_ap_ctx_t *hdd_ap_ctx;
     hdd_hostapd_state_t *hostapd_state;
@@ -17931,8 +17772,13 @@ void wlan_hdd_start_sap(hdd_adapter_t *ap_adapter)
     hostapd_state = WLAN_HDD_GET_HOSTAP_STATE_PTR(ap_adapter);
     pConfig = &ap_adapter->sessionCtx.ap.sapConfig;
 
-    if (0 != wlan_hdd_validate_context(hdd_ctx))
-        return;
+    VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+              FL("ssr in progress %d"), reinit);
+
+     if (!reinit) {
+        if (0 != wlan_hdd_validate_context(hdd_ctx))
+            return;
+    }
 
     mutex_lock(&hdd_ctx->sap_lock);
     if (test_bit(SOFTAP_BSS_STARTED, &ap_adapter->event_flags))
@@ -18344,6 +18190,9 @@ int hdd_init_packet_filtering(hdd_context_t *hdd_ctx,
 		hddLog(LOGE, FL("Could not allocate Memory"));
 		return -ENOMEM;
 	}
+
+	vos_mem_zero(adapter->mc_addr_list.addr,
+		(hdd_ctx->max_mc_addr_list * ETH_ALEN));
 
 	return 0;
 }
