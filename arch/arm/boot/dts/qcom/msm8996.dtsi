@@ -2888,7 +2888,7 @@
 		compatible = "qcom,msm-thermal";
 		reg = <0x70000 0x1000>;
 		qcom,sensor-id = <11>;
-		qcom,poll-ms = <100>;
+		qcom,poll-ms = <150>;
 		qcom,limit-temp = <60>;
 		qcom,temp-hysteresis = <10>;
 		qcom,therm-reset-temp = <105>;
@@ -2898,8 +2898,8 @@
 		qcom,hotplug-temp = <95>;
 		qcom,hotplug-temp-hysteresis = <40>;
 		qcom,freq-mitigation-temp = <90>;
-		qcom,freq-mitigation-temp-hysteresis = <40>;
-		qcom,freq-mitigation-value = <576000>;
+		qcom,freq-mitigation-temp-hysteresis = <35>;
+		qcom,freq-mitigation-value = <729600>;
 		qcom,online-hotplug-core;
 		qcom,disable-core-control;
 		qcom,synchronous-cluster-id = <0 1>;
