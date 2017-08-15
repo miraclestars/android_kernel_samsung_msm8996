@@ -589,7 +589,6 @@ struct msm_pcie_dev_t {
 	bool				 cfg_access;
 	spinlock_t			 cfg_lock;
 	unsigned long		    irqsave_flags;
-	struct mutex			enumerate_lock;
 	struct mutex		     setup_lock;
 
 	struct irq_domain		*irq_domain;
@@ -695,6 +694,9 @@ static u32 num_rc_on;
 
 /* global lock for PCIe common PHY */
 static struct mutex com_phy_lock;
+
+/* global lock for PCIe enumeration */
+static struct mutex enumerate_lock;
 
 /* Table to track info of PCIe devices */
 static struct msm_pcie_device_info
@@ -5196,7 +5198,7 @@ int msm_pcie_enumerate(u32 rc_idx)
 	int ret = 0, bus_ret = 0, scan_ret = 0;
 	struct msm_pcie_dev_t *dev = &msm_pcie_dev[rc_idx];
 
-	mutex_lock(&dev->enumerate_lock);
+	mutex_lock(&enumerate_lock);
 
 	PCIE_DBG(dev, "Enumerate RC%d\n", rc_idx);
 
@@ -5323,7 +5325,7 @@ int msm_pcie_enumerate(u32 rc_idx)
 	}
 
 out:
-	mutex_unlock(&dev->enumerate_lock);
+	mutex_unlock(&enumerate_lock);
 
 	return ret;
 }
@@ -6896,11 +6898,11 @@ int __init pcie_init(void)
 	pcie_drv.rc_num = 0;
 	mutex_init(&pcie_drv.drv_lock);
 	mutex_init(&com_phy_lock);
+	mutex_init(&enumerate_lock);
 
 	for (i = 0; i < MAX_RC_NUM; i++) {
 		spin_lock_init(&msm_pcie_dev[i].cfg_lock);
 		msm_pcie_dev[i].cfg_access = true;
-		mutex_init(&msm_pcie_dev[i].enumerate_lock);
 		mutex_init(&msm_pcie_dev[i].setup_lock);
 		mutex_init(&msm_pcie_dev[i].recovery_lock);
 		spin_lock_init(&msm_pcie_dev[i].linkdown_lock);
