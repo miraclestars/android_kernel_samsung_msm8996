@@ -1909,13 +1909,11 @@ void mmc_set_data_timeout(struct mmc_data *data, const struct mmc_card *card)
 	/*
 	 * Some cards require longer data read timeout than indicated in CSD.
 	 * Address this by setting the read timeout to a "reasonably high"
-	 * value. For the cards tested, 300ms has proven enough. If necessary,
+	 * value. For the cards tested, 600ms has proven enough. If necessary,
 	 * this value can be increased if other problematic cards require this.
-	 * Certain Hynix 5.x cards giving read timeout even with 300ms.
-	 * Increasing further to max value (4s).
 	 */
 	if (mmc_card_long_read_time(card) && data->flags & MMC_DATA_READ) {
-		data->timeout_ns = 4000000000u;
+		data->timeout_ns = 600000000;
 		data->timeout_clks = 0;
 	}
 
@@ -1933,11 +1931,6 @@ void mmc_set_data_timeout(struct mmc_data *data, const struct mmc_card *card)
 			if (data->timeout_ns < 100000000)
 				data->timeout_ns =  100000000;	/* 100ms */
 		}
-	}
-	/* Increase the timeout values for some bad INAND MCP devices */
-	if (card->quirks & MMC_QUIRK_INAND_DATA_TIMEOUT) {
-		data->timeout_ns = 4000000000u; /* 4s */
-		data->timeout_clks = 0;
 	}
 }
 EXPORT_SYMBOL(mmc_set_data_timeout);
