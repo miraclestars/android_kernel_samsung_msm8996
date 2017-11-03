@@ -1195,6 +1195,8 @@ static void mmc_sd_detect(struct mmc_host *host)
 		return;
 	}
 
+	mmc_power_up(host, host->ocr_avail);
+
 	/*
 	 * Just check if our card has been removed.
 	 */
