@@ -2902,4 +2902,6 @@ int vfs_ioc_setflags_prepare(struct inode *inode, unsigned int oldflags,
 
 extern bool path_noexec(const struct path *path);
 
+extern void inode_nohighmem(struct inode *inode);
+
 #endif /* _LINUX_FS_H */

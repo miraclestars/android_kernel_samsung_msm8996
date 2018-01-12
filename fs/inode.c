@@ -1988,3 +1988,9 @@ int vfs_ioc_setflags_prepare(struct inode *inode, unsigned int oldflags,
 	return 0;
 }
 EXPORT_SYMBOL(vfs_ioc_setflags_prepare);
+
+void inode_nohighmem(struct inode *inode)
+{
+	mapping_set_gfp_mask(inode->i_mapping, GFP_USER);
+}
+EXPORT_SYMBOL(inode_nohighmem);
