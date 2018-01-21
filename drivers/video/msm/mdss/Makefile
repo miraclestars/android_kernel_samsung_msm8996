@@ -66,3 +66,5 @@ obj-$(CONFIG_COMPAT) += mdss_compat_utils.o
 ifeq ($(CONFIG_FB_MSM_MDSS_SAMSUNG),y)
 obj-y += samsung/
 endif
+
+obj-$(CONFIG_FB_MSM_MDSS) += mdss_livedisplay.o
