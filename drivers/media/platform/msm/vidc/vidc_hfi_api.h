@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -201,7 +201,7 @@ enum hal_property {
 	HAL_PARAM_VENC_H264_ENTROPY_CABAC_MODEL,
 	HAL_CONFIG_VENC_MAX_BITRATE,
 	HAL_PARAM_VENC_H264_VUI_TIMING_INFO,
-	HAL_PARAM_VENC_H264_GENERATE_AUDNAL,
+	HAL_PARAM_VENC_GENERATE_AUDNAL,
 	HAL_PARAM_VENC_MAX_NUM_B_FRAMES,
 	HAL_PARAM_BUFFER_ALLOC_MODE,
 	HAL_PARAM_VDEC_FRAME_ASSEMBLY,
@@ -236,13 +236,13 @@ enum hal_property {
 	HAL_CONFIG_VDEC_ENTROPY,
 	HAL_PARAM_VENC_BITRATE_TYPE,
 	HAL_PARAM_VENC_H264_PIC_ORDER_CNT,
-	HAL_PARAM_VENC_VIDEO_SIGNAL_INFO,
-	HAL_PARAM_VENC_IFRAMESIZE_TYPE,
 	HAL_PARAM_VENC_LOW_LATENCY,
 	HAL_PARAM_VENC_CONSTRAINED_INTRA_PRED,
 	HAL_CONFIG_VENC_BLUR_RESOLUTION,
+	HAL_PARAM_VENC_VIDEO_SIGNAL_INFO,
 	HAL_PARAM_VENC_SESSION_QP_RANGE_PACKED,
 	HAL_PARAM_VENC_H264_TRANSFORM_8x8,
+	HAL_PARAM_VENC_IFRAMESIZE_TYPE,
 };
 
 enum hal_domain {
@@ -1003,11 +1003,6 @@ struct hal_video_signal_info {
 	bool full_range;
 };
 
-enum hal_video_color_space {
-	HAL_VIDEO_COLOR_SPACE_601,
-	HAL_VIDEO_COLOR_SPACE_709,
-};
-
 enum hal_iframesize_type {
 	HAL_IFRAMESIZE_TYPE_DEFAULT,
 	HAL_IFRAMESIZE_TYPE_MEDIUM,
@@ -1370,6 +1365,7 @@ struct msm_vidc_cb_event {
 	ion_phys_addr_t packet_buffer;
 	ion_phys_addr_t extra_data_buffer;
 	u32 pic_struct;
+	u32 colour_space;
 };
 
 struct msm_vidc_cb_data_done {

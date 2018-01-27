@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -54,12 +54,12 @@
  * 3x3 transformation matrix coefficients in s4.9 fixed point format
  */
 static u32 vpe_csc_601_to_709_matrix_coeff[HAL_MAX_MATRIX_COEFFS] = {
-        0x1BE, 0x1FCC, 0x1FA1, 0, 0x1CC, 0x34, 0, 0x22, 0x1CF
+	470, 8170, 8148, 0, 490, 50, 0, 34, 483
 };
 
 /* offset coefficients in s9 fixed point format */
 static u32 vpe_csc_601_to_709_bias_coeff[HAL_MAX_BIAS_COEFFS] = {
-        0x34, 0, 0x4
+	34, 0, 4
 };
 
 /* clamping value for Y/U/V([min,max] for Y/U/V) */
@@ -468,7 +468,7 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 	},
 	{
 		.id = V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP,
-		.name = "I Frame Quantization",
+		.name = "H264 I Frame Quantization",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.minimum = 0,
 		.maximum = 127,
@@ -479,7 +479,7 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 	},
 	{
 		.id = V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP,
-		.name = "P Frame Quantization",
+		.name = "H264 P Frame Quantization",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.minimum = 0,
 		.maximum = 127,
@@ -490,11 +490,66 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 	},
 	{
 		.id = V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP,
-		.name = "B Frame Quantization",
+		.name = "H264 B Frame Quantization",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.minimum = 0,
 		.maximum = 127,
 		.default_value = B_FRAME_QP,
+		.step = 1,
+		.menu_skip_mask = 0,
+		.qmenu = NULL,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_H263_I_FRAME_QP,
+		.name = "H263 I Frame Quantization",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 1,
+		.maximum = 31,
+		.default_value = I_FRAME_QP,
+		.step = 1,
+		.menu_skip_mask = 0,
+		.qmenu = NULL,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_H263_P_FRAME_QP,
+		.name = "H263 P Frame Quantization",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 1,
+		.maximum = 31,
+		.default_value = P_FRAME_QP,
+		.step = 1,
+		.menu_skip_mask = 0,
+		.qmenu = NULL,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_H263_B_FRAME_QP,
+		.name = "H263 B Frame Quantization",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 1,
+		.maximum = 31,
+		.default_value = B_FRAME_QP,
+		.step = 1,
+		.menu_skip_mask = 0,
+		.qmenu = NULL,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_VPX_I_FRAME_QP,
+		.name = "VPX I Frame Quantization",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 0,
+		.maximum = 127,
+		.default_value = I_FRAME_QP,
+		.step = 1,
+		.menu_skip_mask = 0,
+		.qmenu = NULL,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_VPX_P_FRAME_QP,
+		.name = "VPX P Frame Quantization",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 0,
+		.maximum = 127,
+		.default_value = P_FRAME_QP,
 		.step = 1,
 		.menu_skip_mask = 0,
 		.qmenu = NULL,
@@ -522,6 +577,24 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.qmenu = NULL,
 	},
 	{
+		.id = V4L2_CID_MPEG_VIDEO_VPX_MIN_QP,
+		.name = "VPX Minimum QP",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 0,
+		.maximum = 127,
+		.default_value = 0,
+		.step = 1,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_VPX_MAX_QP,
+		.name = "VPX Maximum QP",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 0,
+		.maximum = 127,
+		.default_value = 127,
+		.step = 1,
+	},
+	{
 		.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_MIN_QP,
 		.name = "VP8 Minimum QP",
 		.type = V4L2_CTRL_TYPE_INTEGER,
@@ -536,12 +609,11 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.minimum = 1,
 		.maximum = 128,
-		.default_value = 1,
-
+		.default_value = 128,
 		.step = 1,
 	},
 	{
-		.id = V4L2_CID_MPEG_VIDC_VIDEO_MPEG4_MIN_QP,
+		.id = V4L2_CID_MPEG_VIDEO_MPEG4_MIN_QP,
 		.name = "MPEG4 Minimum QP",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.minimum = 1,
@@ -550,7 +622,7 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.step = 1,
 	},
 	{
-		.id = V4L2_CID_MPEG_VIDC_VIDEO_MPEG4_MAX_QP,
+		.id = V4L2_CID_MPEG_VIDEO_MPEG4_MAX_QP,
 		.name = "MPEG4 Maximum QP",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.minimum = 1,
@@ -789,14 +861,14 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.step = 1,
 	},
 	{
-		.id = V4L2_CID_MPEG_VIDC_VIDEO_H264_AU_DELIMITER,
+		.id = V4L2_CID_MPEG_VIDC_VIDEO_AU_DELIMITER,
 		.name = "H264 AU Delimiter",
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
-		.minimum = V4L2_MPEG_VIDC_VIDEO_H264_AU_DELIMITER_DISABLED,
-		.maximum = V4L2_MPEG_VIDC_VIDEO_H264_AU_DELIMITER_ENABLED,
+		.minimum = V4L2_MPEG_VIDC_VIDEO_AU_DELIMITER_DISABLED,
+		.maximum = V4L2_MPEG_VIDC_VIDEO_AU_DELIMITER_ENABLED,
 		.step = 1,
 		.default_value =
-			V4L2_MPEG_VIDC_VIDEO_H264_AU_DELIMITER_DISABLED,
+			V4L2_MPEG_VIDC_VIDEO_AU_DELIMITER_DISABLED,
 	},
 	{
 		.id = V4L2_CID_MPEG_VIDC_SET_PERF_LEVEL,
@@ -959,11 +1031,41 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.step = 0,
 	},
 	{
+		.id = V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_I_FRAME_QP,
+		.name = "Iframe initial QP",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 1,
+		.maximum = 127,
+		.default_value = 1,
+		.step = 1,
+		.qmenu = NULL,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_P_FRAME_QP,
+		.name = "Pframe initial QP",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 1,
+		.maximum = 127,
+		.default_value = 1,
+		.step = 1,
+		.qmenu = NULL,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_B_FRAME_QP,
+		.name = "Bframe initial QP",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 1,
+		.maximum = 127,
+		.default_value = 1,
+		.step = 1,
+		.qmenu = NULL,
+	},
+	{
 		.id = V4L2_CID_MPEG_VIDC_VIDEO_I_FRAME_QP,
 		.name = "Iframe initial QP",
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.minimum = 0,
-		.maximum = 127,
+		.minimum = 1,
+		.maximum = 51,
 		.default_value = 1,
 		.step = 1,
 		.qmenu = NULL,
@@ -972,8 +1074,8 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.id = V4L2_CID_MPEG_VIDC_VIDEO_P_FRAME_QP,
 		.name = "Pframe initial QP",
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.minimum = 0,
-		.maximum = 127,
+		.minimum = 1,
+		.maximum = 51,
 		.default_value = 1,
 		.step = 1,
 		.qmenu = NULL,
@@ -982,8 +1084,8 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.id = V4L2_CID_MPEG_VIDC_VIDEO_B_FRAME_QP,
 		.name = "Bframe initial QP",
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.minimum = 0,
-		.maximum = 127,
+		.minimum = 1,
+		.maximum = 51,
 		.default_value = 1,
 		.step = 1,
 		.qmenu = NULL,
@@ -1233,20 +1335,6 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.step = 1,
 	},
 	{
-		.id = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_TYPE,
-		.name = "Bounds of I-frame size",
-		.type = V4L2_CTRL_TYPE_MENU,
-		.minimum = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT,
-		.maximum = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_UNLIMITED,
-		.default_value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT,
-		.menu_skip_mask = ~(
-			(1 << V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT) |
-			(1 << V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_MEDIUM) |
-			(1 << V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_HUGE) |
-			(1 << V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_UNLIMITED)),
-		.qmenu = iframe_sizes,
-	},
-	{
 		.id = V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_MODE,
 		.name = "Low Latency Mode",
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
@@ -1321,27 +1409,21 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.default_value = V4L2_MPEG_VIDC_VIDEO_H264_TRANSFORM_8x8_ENABLE,
 		.step = 1,
 	},
+	{
+		.id = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_TYPE,
+		.name = "Bounds of I-frame size",
+		.type = V4L2_CTRL_TYPE_MENU,
+		.minimum = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT,
+		.maximum = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_UNLIMITED,
+		.default_value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT,
+		.menu_skip_mask = ~(
+			(1 << V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT) |
+			(1 << V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_MEDIUM) |
+			(1 << V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_HUGE) |
+			(1 << V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_UNLIMITED)),
+		.qmenu = iframe_sizes,
+	},
 };
-
-static struct v4l2_ctrl *get_ctrl_from_cluster(int id,
-			struct v4l2_ctrl **cluster, int ncontrols);
-
-/* Small helper macro for quickly getting a control and err checking */
-#define TRY_GET_CTRL(__ctrl_id) ({ \
-		struct v4l2_ctrl *__temp; \
-		__temp = get_ctrl_from_cluster( \
-			__ctrl_id, \
-			ctrl->cluster, ctrl->ncontrols); \
-		if (!__temp) { \
-			dprintk(VIDC_ERR, "Can't find %s (%x) in cluster\n", \
-				#__ctrl_id, __ctrl_id); \
-			/* Clusters are hardcoded, if we can't find */ \
-			/* something then things are massively screwed up */ \
-			BUG_ON(1); \
-		} \
-		__temp; \
-	})
-
 
 #define NUM_CTRLS ARRAY_SIZE(msm_venc_ctrls)
 
@@ -2183,6 +2265,22 @@ unknown_value:
 	return -EINVAL;
 }
 
+/* Small helper macro for quickly getting a control and err checking */
+#define TRY_GET_CTRL(__ctrl_id) ({ \
+		struct v4l2_ctrl *__temp; \
+		__temp = get_ctrl_from_cluster( \
+			__ctrl_id, \
+			ctrl->cluster, ctrl->ncontrols); \
+		if (!__temp) { \
+			dprintk(VIDC_ERR, "Can't find %s (%x) in cluster\n", \
+				#__ctrl_id, __ctrl_id); \
+			/* Clusters are hardcoded, if we can't find */ \
+			/* something then things are massively screwed up */ \
+			BUG_ON(1); \
+		} \
+		__temp; \
+	})
+
 static int msm_venc_validate_qp_value(struct msm_vidc_inst *inst,
 					struct v4l2_ctrl *ctrl)
 {
@@ -2201,23 +2299,24 @@ static int msm_venc_validate_qp_value(struct msm_vidc_inst *inst,
 
 	switch (inst->fmts[CAPTURE_PORT]->fourcc) {
 	case V4L2_PIX_FMT_VP8:
-		temp_ctrl = TRY_GET_CTRL(V4L2_CID_MPEG_VIDC_VIDEO_VP8_MAX_QP);
+		temp_ctrl = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_VPX_MAX_QP);
 		max = temp_ctrl->maximum;
-		temp_ctrl = TRY_GET_CTRL(V4L2_CID_MPEG_VIDC_VIDEO_VP8_MIN_QP);
+		temp_ctrl = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_VPX_MIN_QP);
 		min = temp_ctrl->minimum;
 		if (!VALIDATE_BOUNDARIES(min, max, qp_value))
 			rc = -EINVAL;
 		break;
 	case V4L2_PIX_FMT_H263:
 	case V4L2_PIX_FMT_MPEG4:
-		temp_ctrl = TRY_GET_CTRL(V4L2_CID_MPEG_VIDC_VIDEO_MPEG4_MAX_QP);
+		temp_ctrl = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_MPEG4_MAX_QP);
 		max = temp_ctrl->maximum;
-		temp_ctrl = TRY_GET_CTRL(V4L2_CID_MPEG_VIDC_VIDEO_MPEG4_MIN_QP);
+		temp_ctrl = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_MPEG4_MIN_QP);
 		min = temp_ctrl->minimum;
 		if (!VALIDATE_BOUNDARIES(min, max, qp_value))
 			rc = -EINVAL;
 		break;
-	default:
+	case V4L2_PIX_FMT_H264:
+	case V4L2_PIX_FMT_HEVC:
 		temp_ctrl = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_H264_MAX_QP);
 		max = temp_ctrl->maximum;
 		temp_ctrl = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_H264_MIN_QP);
@@ -2225,9 +2324,14 @@ static int msm_venc_validate_qp_value(struct msm_vidc_inst *inst,
 		if (!VALIDATE_BOUNDARIES(min, max, qp_value))
 			rc = -EINVAL;
 		break;
+	default:
+		dprintk(VIDC_ERR, "%s Invalid Codec\n", __func__);
+		return -EINVAL;
 	}
 	return rc;
+#undef VALIDATE_BOUNDARIES
 }
+
 
 static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 {
@@ -2263,8 +2367,8 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	int baselayerid = 0;
 	int frameqp = 0;
 	int pic_order_cnt = 0;
-	enum hal_iframesize_type iframesize_type = HAL_IFRAMESIZE_TYPE_DEFAULT;
 	struct hal_video_signal_info signal_info = {0};
+	enum hal_iframesize_type iframesize_type = HAL_IFRAMESIZE_TYPE_DEFAULT;
 
 	if (!inst || !inst->core || !inst->core->device) {
 		dprintk(VIDC_ERR, "%s invalid parameters\n", __func__);
@@ -2642,6 +2746,81 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		pdata = &quantization;
 		break;
 	}
+	case V4L2_CID_MPEG_VIDEO_H263_I_FRAME_QP: {
+		struct v4l2_ctrl *qpp, *qpb;
+
+		qpp = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_H263_P_FRAME_QP);
+		qpb = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_H263_B_FRAME_QP);
+
+		property_id = HAL_PARAM_VENC_SESSION_QP;
+		quantization.qpi = ctrl->val;
+		quantization.qpp = qpp->val;
+		quantization.qpb = qpb->val;
+		quantization.layer_id = 0;
+
+		pdata = &quantization;
+		break;
+	}
+	case V4L2_CID_MPEG_VIDEO_H263_P_FRAME_QP: {
+		struct v4l2_ctrl *qpi, *qpb;
+
+		qpi = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_H263_I_FRAME_QP);
+		qpb = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_H263_B_FRAME_QP);
+
+		property_id = HAL_PARAM_VENC_SESSION_QP;
+		quantization.qpp = ctrl->val;
+		quantization.qpi = qpi->val;
+		quantization.qpb = qpb->val;
+		quantization.layer_id = 0;
+
+		pdata = &quantization;
+		break;
+	}
+	case V4L2_CID_MPEG_VIDEO_H263_B_FRAME_QP: {
+		struct v4l2_ctrl *qpi, *qpp;
+
+		qpi = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_H263_I_FRAME_QP);
+		qpp = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_H263_P_FRAME_QP);
+
+		property_id = HAL_PARAM_VENC_SESSION_QP;
+		quantization.qpb = ctrl->val;
+		quantization.qpi = qpi->val;
+		quantization.qpp = qpp->val;
+		quantization.layer_id = 0;
+
+		pdata = &quantization;
+		break;
+	}
+	case V4L2_CID_MPEG_VIDEO_VPX_I_FRAME_QP: {
+		struct v4l2_ctrl *qpp;
+
+		qpp = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_VPX_P_FRAME_QP);
+
+		property_id = HAL_PARAM_VENC_SESSION_QP;
+		quantization.qpi = ctrl->val;
+		quantization.qpp = qpp->val;
+		/* Bframes are not supported for VPX */
+		quantization.qpb = 0;
+		quantization.layer_id = 0;
+
+		pdata = &quantization;
+		break;
+	}
+	case V4L2_CID_MPEG_VIDEO_VPX_P_FRAME_QP: {
+		struct v4l2_ctrl *qpi;
+
+		qpi = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_VPX_I_FRAME_QP);
+
+		property_id = HAL_PARAM_VENC_SESSION_QP;
+		quantization.qpp = ctrl->val;
+		quantization.qpi = qpi->val;
+		/* Bframes are not supported for VPX */
+		quantization.qpb = 0;
+		quantization.layer_id = 0;
+
+		pdata = &quantization;
+		break;
+	}
 	case V4L2_CID_MPEG_VIDEO_H264_MIN_QP: {
 		struct v4l2_ctrl *qp_max;
 
@@ -2682,8 +2861,85 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		pdata = &qp_range;
 		break;
 	}
+	case V4L2_CID_MPEG_VIDEO_MPEG4_MIN_QP: {
+		struct v4l2_ctrl *qp_max;
+
+		qp_max = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_MPEG4_MAX_QP);
+		if (ctrl->val >= qp_max->val) {
+			dprintk(VIDC_ERR,
+					"Bad range: Min QP (%d) > Max QP(%d)\n",
+					ctrl->val, qp_max->val);
+			rc = -ERANGE;
+			break;
+		}
+
+		property_id = HAL_PARAM_VENC_SESSION_QP_RANGE;
+		qp_range.layer_id = 0;
+		qp_range.max_qp = qp_max->val;
+		qp_range.min_qp = ctrl->val;
+
+		pdata = &qp_range;
+		break;
+	}
+	case V4L2_CID_MPEG_VIDEO_MPEG4_MAX_QP: {
+		struct v4l2_ctrl *qp_min;
+
+		qp_min = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_MPEG4_MIN_QP);
+		if (ctrl->val <= qp_min->val) {
+			dprintk(VIDC_ERR,
+					"Bad range: Max QP (%d) < Min QP(%d)\n",
+					ctrl->val, qp_min->val);
+			rc = -ERANGE;
+			break;
+		}
+
+		property_id = HAL_PARAM_VENC_SESSION_QP_RANGE;
+		qp_range.layer_id = 0;
+		qp_range.max_qp = ctrl->val;
+		qp_range.min_qp = qp_min->val;
+
+		pdata = &qp_range;
+		break;
+	}
+	case V4L2_CID_MPEG_VIDEO_VPX_MIN_QP: {
+		struct v4l2_ctrl *qp_max;
+
+		qp_max = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_VPX_MAX_QP);
+		if (ctrl->val >= qp_max->val) {
+			dprintk(VIDC_ERR,
+					"Bad range: Min QP (%d) > Max QP(%d)\n",
+					ctrl->val, qp_max->val);
+			rc = -ERANGE;
+			break;
+		}
+		property_id = HAL_PARAM_VENC_SESSION_QP_RANGE;
+		qp_range.layer_id = 0;
+		qp_range.max_qp = qp_max->val;
+		qp_range.min_qp = ctrl->val;
+		pdata = &qp_range;
+		break;
+	}
+	case V4L2_CID_MPEG_VIDEO_VPX_MAX_QP: {
+		struct v4l2_ctrl *qp_min;
+
+		qp_min = TRY_GET_CTRL(V4L2_CID_MPEG_VIDEO_VPX_MIN_QP);
+		if (ctrl->val <= qp_min->val) {
+			dprintk(VIDC_ERR,
+					"Bad range: Max QP (%d) < Min QP(%d)\n",
+					ctrl->val, qp_min->val);
+			rc = -ERANGE;
+			break;
+		}
+		property_id = HAL_PARAM_VENC_SESSION_QP_RANGE;
+		qp_range.layer_id = 0;
+		qp_range.max_qp = ctrl->val;
+		qp_range.min_qp = qp_min->val;
+		pdata = &qp_range;
+		break;
+	}
 	case V4L2_CID_MPEG_VIDC_VIDEO_VP8_MIN_QP: {
 		struct v4l2_ctrl *qp_max;
+
 		qp_max = TRY_GET_CTRL(V4L2_CID_MPEG_VIDC_VIDEO_VP8_MAX_QP);
 		property_id = HAL_PARAM_VENC_SESSION_QP_RANGE;
 		qp_range.layer_id = 0;
@@ -2694,6 +2950,7 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	}
 	case V4L2_CID_MPEG_VIDC_VIDEO_VP8_MAX_QP: {
 		struct v4l2_ctrl *qp_min;
+
 		qp_min = TRY_GET_CTRL(V4L2_CID_MPEG_VIDC_VIDEO_VP8_MIN_QP);
 		property_id = HAL_PARAM_VENC_SESSION_QP_RANGE;
 		qp_range.layer_id = 0;
@@ -3020,14 +3277,14 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		pdata = &vui_timing_info;
 		break;
 	}
-	case V4L2_CID_MPEG_VIDC_VIDEO_H264_AU_DELIMITER:
-		property_id = HAL_PARAM_VENC_H264_GENERATE_AUDNAL;
+	case V4L2_CID_MPEG_VIDC_VIDEO_AU_DELIMITER:
+		property_id = HAL_PARAM_VENC_GENERATE_AUDNAL;
 
 		switch (ctrl->val) {
-		case V4L2_MPEG_VIDC_VIDEO_H264_AU_DELIMITER_DISABLED:
+		case V4L2_MPEG_VIDC_VIDEO_AU_DELIMITER_DISABLED:
 			enable.enable = 0;
 			break;
-		case V4L2_MPEG_VIDC_VIDEO_H264_AU_DELIMITER_ENABLED:
+		case V4L2_MPEG_VIDC_VIDEO_AU_DELIMITER_ENABLED:
 			enable.enable = 1;
 			break;
 		default:
@@ -3224,13 +3481,60 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		pdata = &baselayerid;
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_CONFIG_QP:
+		/* Sanity check for the QP boundaries as we are using
+		 * same control to set dynamic QP for all the codecs
+		 */
 		rc = msm_venc_validate_qp_value(inst, ctrl);
-		if (rc)
+		if (rc) {
+			dprintk(VIDC_ERR, "Invalid QP Config QP Range\n");
 			break;
+		}
 		property_id = HAL_CONFIG_VENC_FRAME_QP;
 		frameqp = ctrl->val;
 		pdata = &frameqp;
 		break;
+	case V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_I_FRAME_QP:
+	{
+		rc = msm_venc_validate_qp_value(inst, ctrl);
+		if (rc) {
+			dprintk(VIDC_ERR, "Invalid Initial I QP\n");
+			break;
+		}
+		/*
+		 * Defer sending property from here, set_ext_ctrl
+		 * will send it based on the rc value.
+		 */
+		property_id = 0;
+		break;
+	}
+	case V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_B_FRAME_QP:
+	{
+		rc = msm_venc_validate_qp_value(inst, ctrl);
+		if (rc) {
+			dprintk(VIDC_ERR, "Invalid Initial B QP\n");
+			break;
+		}
+		/*
+		 * Defer sending property from here, set_ext_ctrl
+		 * will send it based on the rc value.
+		 */
+		property_id = 0;
+		break;
+	}
+	case V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_P_FRAME_QP:
+	{
+		rc = msm_venc_validate_qp_value(inst, ctrl);
+		if (rc) {
+			dprintk(VIDC_ERR, "Invalid Initial P QP\n");
+			break;
+		}
+		/*
+		 * Defer sending property from here, set_ext_ctrl
+		 * will send it based on the rc value.
+		 */
+		property_id = 0;
+		break;
+	}
 	case V4L2_CID_MPEG_VIDC_VIDEO_VQZIP_SEI:
 		property_id = HAL_PARAM_VENC_VQZIP_SEI;
 		enable.enable = ctrl->val;
@@ -3368,7 +3672,6 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	}
 
 	v4l2_ctrl_lock(ctrl);
-#undef TRY_GET_CTRL
 
 	if (!rc && property_id) {
 		dprintk(VIDC_DBG, "Control: HAL property=%x,ctrl_value=%d\n",
@@ -3380,6 +3683,7 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 
 	return rc;
 }
+#undef TRY_GET_CTRL
 
 static int try_set_ext_ctrl(struct msm_vidc_inst *inst,
 	struct v4l2_ext_controls *ctrl)
@@ -3396,6 +3700,7 @@ static int try_set_ext_ctrl(struct msm_vidc_inst *inst,
 	struct hal_aspect_ratio sar;
 	struct hal_bitrate bitrate;
 	struct hal_frame_size blur_res;
+	struct v4l2_control temp_ctrl;
 
 	if (!inst || !inst->core || !inst->core->device || !ctrl) {
 		dprintk(VIDC_ERR, "%s invalid parameters\n", __func__);
@@ -3454,6 +3759,55 @@ static int try_set_ext_ctrl(struct msm_vidc_inst *inst,
 			pdata = &quant;
 			break;
 		case V4L2_CID_MPEG_VIDC_VIDEO_B_FRAME_QP:
+			quant.qpb = control[i].value;
+			property_id = HAL_PARAM_VENC_ENABLE_INITIAL_QP;
+			pdata = &quant;
+			break;
+		case V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_I_FRAME_QP:
+			/* Sanity check for the QP boundaries as we are using
+			 * same control to set Initial QP for all the codecs
+			 */
+			temp_ctrl.id =
+				V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_I_FRAME_QP;
+			temp_ctrl.value = control[i].value;
+
+			rc = msm_comm_s_ctrl(inst, &temp_ctrl);
+			if (rc) {
+				dprintk(VIDC_ERR,
+					"%s Failed setting Initial I Frame QP : %d\n",
+					__func__, rc);
+				break;
+			}
+			quant.qpi = control[i].value;
+			property_id = HAL_PARAM_VENC_ENABLE_INITIAL_QP;
+			pdata = &quant;
+			break;
+		case V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_P_FRAME_QP:
+			temp_ctrl.id =
+				V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_P_FRAME_QP;
+			temp_ctrl.value = control[i].value;
+			rc = msm_comm_s_ctrl(inst, &temp_ctrl);
+			if (rc) {
+				dprintk(VIDC_ERR,
+					"%s Failed setting Initial P Frame QP : %d\n",
+					__func__, rc);
+				break;
+			}
+			quant.qpp = control[i].value;
+			property_id = HAL_PARAM_VENC_ENABLE_INITIAL_QP;
+			pdata = &quant;
+			break;
+		case V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_B_FRAME_QP:
+			temp_ctrl.id =
+				V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_B_FRAME_QP;
+			temp_ctrl.value = control[i].value;
+			rc = msm_comm_s_ctrl(inst, &temp_ctrl);
+			if (rc) {
+				dprintk(VIDC_ERR,
+					"%s Failed setting Initial B Frame QP : %d\n",
+					__func__, rc);
+				break;
+			}
 			quant.qpb = control[i].value;
 			property_id = HAL_PARAM_VENC_ENABLE_INITIAL_QP;
 			pdata = &quant;
