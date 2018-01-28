@@ -1645,15 +1645,6 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 	if (gpio_is_valid(pdata->status_gpio) & !(flags & OF_GPIO_ACTIVE_LOW))
 		pdata->caps2 |= MMC_CAP2_CD_ACTIVE_HIGH;
 
-	pdata->tflash_en_gpio = of_get_named_gpio(np, "sec,tflash-en-gpio", 0);
-	if (gpio_is_valid(pdata->tflash_en_gpio)) {
-		gpio_direction_output(pdata->tflash_en_gpio, 1);
-		dev_err(dev, "tflash is %sabled(%d).\n",
-				gpio_get_value(pdata->tflash_en_gpio) ? "en" : "dis",
-				pdata->tflash_en_gpio);
-	} else
-		dev_err(dev, "invalid tflash_en.\n");
-
 	of_property_read_u32(np, "qcom,bus-width", &bus_width);
 	if (bus_width == 8)
 		pdata->mmc_bus_width = MMC_CAP_8_BIT_DATA;
@@ -2178,10 +2169,9 @@ static int sdhci_msm_setup_vreg(struct sdhci_msm_pltfm_data *pdata,
 
 	for (i = 0; i < ARRAY_SIZE(vreg_table); i++) {
 		if (vreg_table[i]) {
-			if (enable) {
+			if (enable)
 				ret = sdhci_msm_vreg_enable(vreg_table[i]);
-				udelay(300);
-			} else
+			else
 				ret = sdhci_msm_vreg_disable(vreg_table[i]);
 			if (ret)
 				goto out;
@@ -2191,7 +2181,6 @@ out:
 	return ret;
 }
 
-#if !defined(CONFIG_SEC_HYBRID_TRAY)
 /*
  * Reset vreg by ensuring it is off during probe. A call
  * to enable vreg is needed to balance disable vreg
@@ -2206,7 +2195,6 @@ static int sdhci_msm_vreg_reset(struct sdhci_msm_pltfm_data *pdata)
 	ret = sdhci_msm_setup_vreg(pdata, 0, true);
 	return ret;
 }
-#endif
 
 /* This init function should be called only once for each SDHC slot */
 static int sdhci_msm_vreg_init(struct device *dev,
@@ -2242,12 +2230,9 @@ static int sdhci_msm_vreg_init(struct device *dev,
 		if (ret)
 			goto vdd_reg_deinit;
 	}
-#if !defined(CONFIG_SEC_HYBRID_TRAY)
-	/* in case of using the Hybrid tray, Do not vreg_reset */
 	ret = sdhci_msm_vreg_reset(pdata);
 	if (ret)
 		dev_err(dev, "vreg reset failed (%d)\n", ret);
-#endif
 	goto out;
 
 vdd_io_reg_deinit:
@@ -2597,9 +2582,17 @@ static void sdhci_msm_check_power_status(struct sdhci_host *host, u32 req_type)
 	if (done)
 		init_completion(&msm_host->pwr_irq_completion);
 	else if (!wait_for_completion_timeout(&msm_host->pwr_irq_completion,
-				msecs_to_jiffies(MSM_PWR_IRQ_TIMEOUT_MS)))
+				msecs_to_jiffies(MSM_PWR_IRQ_TIMEOUT_MS))) {
 		__WARN_printf("%s: request(%d) timed out waiting for pwr_irq\n",
 					mmc_hostname(host->mmc), req_type);
+		MMC_TRACE(host->mmc,
+			"request(%d) timed out waiting for pwr_irq, 0xDC: 0x%08x | 0xE0: 0x%08x | 0xE8: 0x%08x\n",
+			req_type,
+			readl_relaxed(msm_host->core_mem + CORE_PWRCTL_STATUS),
+			readl_relaxed(msm_host->core_mem + CORE_PWRCTL_MASK),
+			readl_relaxed(msm_host->core_mem + CORE_PWRCTL_CTL));
+		mmc_stop_tracing(host->mmc);
+		}
 
 	pr_debug("%s: %s: request %d done\n", mmc_hostname(host->mmc),
 			__func__, req_type);
@@ -2721,7 +2714,24 @@ out:
 	return rc;
 }
 
+static void sdhci_msm_disable_controller_clock(struct sdhci_host *host)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_msm_host *msm_host = pltfm_host->priv;
 
+	if (atomic_read(&msm_host->controller_clock)) {
+		if (!IS_ERR(msm_host->clk))
+			clk_disable_unprepare(msm_host->clk);
+		if (!IS_ERR(msm_host->pclk))
+			clk_disable_unprepare(msm_host->pclk);
+		if (!IS_ERR(msm_host->ice_clk))
+			clk_disable_unprepare(msm_host->ice_clk);
+		sdhci_msm_bus_voting(host, 0);
+		atomic_set(&msm_host->controller_clock, 0);
+		pr_debug("%s: %s: disabled controller clock\n",
+			mmc_hostname(host->mmc), __func__);
+	}
+}
 
 static int sdhci_msm_prepare_clocks(struct sdhci_host *host, bool enable)
 {
@@ -3086,6 +3096,10 @@ void sdhci_msm_dump_vendor_regs(struct sdhci_host *host)
 	pr_info("----------- VENDOR REGISTER DUMP -----------\n");
 	if (host->cq_host)
 		sdhci_msm_cmdq_dump_debug_ram(host);
+
+	MMC_TRACE(host->mmc, "Data cnt: 0x%08x | Fifo cnt: 0x%08x\n",
+		readl_relaxed(msm_host->core_mem + CORE_MCI_DATA_CNT),
+		readl_relaxed(msm_host->core_mem + CORE_MCI_FIFO_CNT));
 	pr_info("Data cnt: 0x%08x | Fifo cnt: 0x%08x | Int sts: 0x%08x\n",
 		readl_relaxed(msm_host->core_mem + CORE_MCI_DATA_CNT),
 		readl_relaxed(msm_host->core_mem + CORE_MCI_FIFO_CNT),
@@ -3892,131 +3906,6 @@ static bool sdhci_msm_is_bootdevice(struct device *dev)
 	return true;
 }
 
-/* SYSFS about SD Card Detection */
-extern struct class *sec_class;
-static struct device *t_flash_detect_dev;
-
-static ssize_t t_flash_detect_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct sdhci_msm_host *msm_host = dev_get_drvdata(dev);
-#if defined(CONFIG_NO_SD_DET_PIN) || defined(CONFIG_SEC_HYBRID_TRAY)
-	if (msm_host->mmc->card) {
-		printk(KERN_DEBUG "External sd: card inserted.\n");
-		return sprintf(buf, "Insert\n");
-	} else {
-		if (gpio_is_valid(msm_host->pdata->status_gpio) &&
-				gpio_get_value(msm_host->pdata->status_gpio)) {
-			printk(KERN_DEBUG "SD slot tray Removed.\n");
-			return sprintf(buf, "Notray\n");
-		}
-		printk(KERN_DEBUG "External sd: card removed.\n");
-		return sprintf(buf, "Remove\n");
-	}
-#else
-	unsigned int detect;
-
-	if (gpio_is_valid(msm_host->pdata->status_gpio))
-		detect = gpio_get_value(msm_host->pdata->status_gpio);
-
-	else {
-		pr_info("%s : External  SD detect pin Error\n", __func__);
-		return sprintf(buf, "Error\n");
-	}
-
-	pr_info("%s : detect = %d.\n", __func__, detect);
-	if (!detect) {
-		printk(KERN_DEBUG "External sd: card inserted.\n");
-		return sprintf(buf, "Insert\n");
-	} else {
-		printk(KERN_DEBUG "External sd: card removed.\n");
-		return sprintf(buf, "Remove\n");
-	}
-#endif
-}
-
-static ssize_t sd_detect_cnt_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct sdhci_msm_host *msm_host = dev_get_drvdata(dev);
-
-	dev_info(dev, "%s : CD count is = %u\n", __func__, msm_host->mmc->card_detect_cnt);
-	return sprintf(buf, "%u", msm_host->mmc->card_detect_cnt);
-}
-
-/* SYSFS for service center support */
-static struct device *sd_info_dev;
-static ssize_t sd_count_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{	
-	struct mmc_host *host = dev_get_drvdata(dev);
-	struct mmc_card *card = host->card;
-	struct mmc_card_error_log *err_log;
-	u64 total_cnt = 0;
-	int len = 0;
-	int i = 0;
-	
-	if (!card) {
-		len = snprintf(buf, PAGE_SIZE, "no card\n");
-		goto out;
-	}
-
-	err_log = card->err_log;
-
-	for (i = 0; i < 6; i++) {
-		if (total_cnt < MAX_CNT_U64)
-			total_cnt += err_log[i].count;
-	}
-	len = snprintf(buf, PAGE_SIZE, "%lld\n", total_cnt);
-
-out:
-	return len;
-}
-
-
-/* SYSFS for big data support */
-static struct device *sd_data_dev;
-static ssize_t sd_data_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct mmc_host *host = dev_get_drvdata(dev);
-	struct mmc_card *card = host->card;
-	struct mmc_card_error_log *err_log;
-	u64 total_c_cnt = 0;
-	u64 total_t_cnt = 0;
-	int len = 0;
-	int i = 0;
-
-	if (!card) {
-		len = snprintf(buf, PAGE_SIZE,
-			"\"GE\":\"0\",\"CC\":\"0\",\"ECC\":\"0\",\"WP\":\"0\","\
-			"\"OOR\":\"0\",\"CRC\":\"0\",\"TMO\":\"0\"\n");
-		goto out;
-	}
-
-	err_log = card->err_log;
-
-	for (i = 0; i < 6; i++) {
-		if (err_log[i].err_type == -EILSEQ && total_c_cnt < MAX_CNT_U64)
-			total_c_cnt += err_log[i].count;
-		if (err_log[i].err_type == -ETIMEDOUT && total_t_cnt < MAX_CNT_U64)
-			total_t_cnt += err_log[i].count;
-	}
-
-	len = snprintf(buf, PAGE_SIZE,
-		"\"GE\":\"%d\",\"CC\":\"%d\",\"ECC\":\"%d\",\"WP\":\"%d\","\
-		"\"OOR\":\"%d\",\"CRC\":\"%lld\",\"TMO\":\"%lld\"\n",
-		err_log[0].ge_cnt, err_log[0].cc_cnt, err_log[0].ecc_cnt,
-		err_log[0].wp_cnt, err_log[0].oor_cnt, total_c_cnt, total_t_cnt); 
-out:
-	return len;
-}
-
-static DEVICE_ATTR(status, S_IRUGO, t_flash_detect_show, NULL);
-static DEVICE_ATTR(cd_cnt, S_IRUGO, sd_detect_cnt_show, NULL);
-static DEVICE_ATTR(sd_count, S_IRUGO, sd_count_show, NULL);
-static DEVICE_ATTR(sd_data, S_IRUGO, sd_data_show, NULL);
-
 static int sdhci_msm_probe(struct platform_device *pdev)
 {
 	struct sdhci_host *host;
@@ -4299,6 +4188,8 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	host->quirks2 |= SDHCI_QUIRK2_IGNORE_DATATOUT_FOR_R1BCMD;
 	host->quirks2 |= SDHCI_QUIRK2_BROKEN_PRESET_VALUE;
 	host->quirks2 |= SDHCI_QUIRK2_USE_RESERVED_MAX_TIMEOUT;
+	host->quirks2 |= SDHCI_QUIRK2_NON_STANDARD_TUNING;
+	host->quirks2 |= SDHCI_QUIRK2_USE_PIO_FOR_EMMC_TUNING;
 
 	if (host->quirks2 & SDHCI_QUIRK2_ALWAYS_USE_BASE_CLOCK)
 		host->quirks2 |= SDHCI_QUIRK2_DIVIDE_TOUT_BY_4;
@@ -4349,17 +4240,16 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	/* Set host capabilities */
 	msm_host->mmc->caps |= msm_host->pdata->mmc_bus_width;
 	msm_host->mmc->caps |= msm_host->pdata->caps;
+	msm_host->mmc->caps |= MMC_CAP_AGGRESSIVE_PM;
 	msm_host->mmc->caps |= MMC_CAP_WAIT_WHILE_BUSY;
 	msm_host->mmc->caps2 |= msm_host->pdata->caps2;
 	msm_host->mmc->caps2 |= MMC_CAP2_BOOTPART_NOACC;
-	msm_host->mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
 	msm_host->mmc->caps2 |= MMC_CAP2_HS400_POST_TUNING;
+	msm_host->mmc->caps2 |= MMC_CAP2_CLK_SCALE;
+	msm_host->mmc->caps2 |= MMC_CAP2_SANITIZE;
 	msm_host->mmc->caps2 |= MMC_CAP2_MAX_DISCARD_SIZE;
 	msm_host->mmc->caps2 |= MMC_CAP2_SLEEP_AWAKE;
-#if defined(CONFIG_SEC_HYBRID_TRAY)
-	msm_host->mmc->caps2 |= MMC_CAP2_NO_PRESCAN_POWERUP;
-#endif
-	msm_host->mmc->caps2 |= MMC_CAP2_DETECT_ON_ERR;
+	msm_host->mmc->pm_caps |= MMC_PM_KEEP_POWER | MMC_PM_WAKE_SDIO_IRQ;
 
 	if (msm_host->pdata->nonremovable)
 		msm_host->mmc->caps |= MMC_CAP_NONREMOVABLE;
@@ -4405,68 +4295,6 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 					__func__, ret);
 			goto vreg_deinit;
 		}
-	}
-
-#if defined(CONFIG_NO_SD_DET_PIN)
-	if (t_flash_detect_dev == NULL && !strcmp(host->hw_name, "74a4900.sdhci")) {
-#else
-	if (t_flash_detect_dev == NULL && gpio_is_valid(msm_host->pdata->status_gpio)) {
-#endif
-		printk(KERN_DEBUG "%s : Change sysfs Card Detect\n", __func__);
-
-		t_flash_detect_dev = device_create(sec_class,
-				NULL, 0, NULL, "sdcard");
-		if (IS_ERR(t_flash_detect_dev))
-			pr_err("%s : Failed to create device!\n", __func__);
-
-		if (device_create_file(t_flash_detect_dev,
-					&dev_attr_status) < 0)
-			pr_err("%s : Failed to create device file(%s)!\n",
-					__func__, dev_attr_status.attr.name);
-
-		if (device_create_file(t_flash_detect_dev,
-					&dev_attr_cd_cnt) < 0)
-			pr_err("%s : Failed to create device file(%s)!\n",
-					__func__, dev_attr_cd_cnt.attr.name);
-
-		dev_set_drvdata(t_flash_detect_dev, msm_host);
-	}
-
-#if defined(CONFIG_NO_SD_DET_PIN)
-	if (sd_info_dev == NULL && !strcmp(host->hw_name, "74a4900.sdhci")) {
-#else
-	if (sd_info_dev == NULL && gpio_is_valid(msm_host->pdata->status_gpio)) {
-#endif
-
-		sd_info_dev = device_create(sec_class,
-				NULL, 0, NULL, "sdinfo");
-                if (IS_ERR(sd_info_dev))
-                        pr_err("%s : Failed to create device!\n", __func__);
-
-                if (device_create_file(sd_info_dev,
-                        &dev_attr_sd_count) < 0)
-                        pr_err("%s : Failed to create device file(%s)!\n",
-                                        __func__, dev_attr_sd_count.attr.name);
-
-                dev_set_drvdata(sd_info_dev, msm_host->mmc);
-	}
-
-#if defined(CONFIG_NO_SD_DET_PIN)
-	if (sd_data_dev == NULL && !strcmp(host->hw_name, "74a4900.sdhci")) {
-#else
-	if (sd_data_dev == NULL && gpio_is_valid(msm_host->pdata->status_gpio)) {
-#endif
-		sd_data_dev = device_create(sec_class,
-				NULL, 0, NULL, "sddata");
-                if (IS_ERR(sd_data_dev))
-                        pr_err("%s : Failed to create device!\n", __func__);
-
-                if (device_create_file(sd_data_dev,
-                        &dev_attr_sd_data) < 0)
-                        pr_err("%s : Failed to create device file(%s)!\n",
-                                        __func__, dev_attr_sd_data.attr.name);
-
-                dev_set_drvdata(sd_data_dev, msm_host->mmc);
 	}
 
 	if ((sdhci_readl(host, SDHCI_CAPABILITIES) & SDHCI_CAN_64BIT) &&
@@ -4764,7 +4592,7 @@ static int sdhci_msm_suspend(struct device *dev)
 	}
 	ret = sdhci_msm_runtime_suspend(dev);
 out:
-
+	sdhci_msm_disable_controller_clock(host);
 	if (host->mmc->card && mmc_card_sdio(host->mmc->card)) {
 		sdio_cfg = sdhci_msm_cfg_sdio_wakeup(host, true);
 		if (sdio_cfg)
@@ -4784,14 +4612,6 @@ static int sdhci_msm_resume(struct device *dev)
 	int ret = 0;
 	int sdio_cfg = 0;
 	ktime_t start = ktime_get();
-
-	if (gpio_is_valid(msm_host->pdata->tflash_en_gpio)) {
-		if (!gpio_get_value(msm_host->pdata->tflash_en_gpio))
-			gpio_direction_output(msm_host->pdata->tflash_en_gpio, 1);
-		pr_err("tflash is %sabled(%d).\n",
-				gpio_get_value(msm_host->pdata->tflash_en_gpio) ? "en" : "dis",
-				msm_host->pdata->tflash_en_gpio);
-	}
 
 	if (gpio_is_valid(msm_host->pdata->status_gpio) &&
 		(msm_host->mmc->slot.cd_irq >= 0))
@@ -4847,30 +4667,6 @@ static const struct dev_pm_ops sdhci_msm_pmops = {
 	.suspend_noirq = sdhci_msm_suspend_noirq,
 };
 
-
-static void sdhci_msm_shutdown(struct platform_device *pdev)
-{
-	struct sdhci_host *host = platform_get_drvdata(pdev);
-	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
-	struct sdhci_msm_host *msm_host = pltfm_host->priv;
-	struct sdhci_msm_pltfm_data *pdata = msm_host->pdata;
-	int ret;
-
-	ret = sdhci_msm_setup_vreg(msm_host->pdata, false, false);
-	if (ret)
-		pr_err("%s: failed to shutdown the vregs.\n", mmc_hostname(host->mmc));
-
-	mdelay(2);
-
-	if (gpio_is_valid(pdata->tflash_en_gpio)) {
-		gpio_direction_output(pdata->tflash_en_gpio, 0);
-		pr_err("tflash is %sabled(%d).\n",
-				gpio_get_value(pdata->tflash_en_gpio) ? "en" : "dis",
-				pdata->tflash_en_gpio);
-	}
-
-	return;
-}
 #define SDHCI_MSM_PMOPS (&sdhci_msm_pmops)
 
 #else
@@ -4891,9 +4687,6 @@ static struct platform_driver sdhci_msm_driver = {
 		.of_match_table = sdhci_msm_dt_match,
 		.pm	= SDHCI_MSM_PMOPS,
 	},
-#ifdef CONFIG_PM
-	.shutdown	= sdhci_msm_shutdown,
-#endif
 };
 
 module_platform_driver(sdhci_msm_driver);
