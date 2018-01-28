@@ -1133,31 +1133,6 @@ static void mmc_sd_remove(struct mmc_host *host)
  */
 static int mmc_sd_alive(struct mmc_host *host)
 {
-	int err = 0;
-
-	err = mmc_send_status(host->card, NULL);
-	/*
-	 * if mmc_send_status() returns error even card is presented 
-	 * It needs to re-initialize the card and send status CMD again.
-	 *   1. set the MMC_BUSRESUME_NEEDS_RESUME to run mmc_resume_bus
-	 *   2. set suspended status to re-init
-	 *   3. set to MMC_POWER_UP to set LEGACY
-	 *   4. set runtime pm to disable that is already enabled
-	 */
-	if (err && host->card && mmc_bus_manual_resume(host)) {
-		pr_err("%s: resume_bus: info(E:%d,F:%d,P:%d,S:%d,RD:%d)\n",
-				mmc_hostname(host), err, host->bus_resume_flags,
-				host->ios.power_mode,
-				(mmc_card_suspended(host->card) ? 1 : 0),
-				host->rescan_disable);
-		host->bus_resume_flags |= MMC_BUSRESUME_NEEDS_RESUME;
-		mmc_card_set_suspended(host->card);
-		host->ios.power_mode = MMC_POWER_UP;
-		pm_runtime_disable(&host->card->dev);
-		mmc_resume_bus(host);
-	} else
-		return err;
-
 	return mmc_send_status(host->card, NULL);
 }
 
@@ -1173,20 +1148,6 @@ static void mmc_sd_detect(struct mmc_host *host)
 
 	BUG_ON(!host);
 	BUG_ON(!host->card);
-
-#if defined(CONFIG_SEC_HYBRID_TRAY)
-	if (host->ops->get_cd && host->ops->get_cd(host) == 0) {
-		mmc_card_set_removed(host->card);
-		mmc_sd_remove(host);
-
-		mmc_claim_host(host);
-		mmc_detach_bus(host);
-		mmc_power_off(host);
-		mmc_release_host(host);
-		pr_err("%s: card(tray) is removed...\n", mmc_hostname(host));
-		return;
-	}
-#endif
 
 	mmc_get_card(host->card);
 
@@ -1263,11 +1224,13 @@ static int mmc_sd_suspend(struct mmc_host *host)
 {
 	int err;
 
+	MMC_TRACE(host, "%s: Enter\n", __func__);
 	err = _mmc_sd_suspend(host);
 	if (!err) {
 		pm_runtime_disable(&host->card->dev);
 		pm_runtime_set_suspended(&host->card->dev);
 	}
+	MMC_TRACE(host, "%s: Exit err: %d\n", __func__, err);
 
 	return err;
 }
@@ -1288,12 +1251,6 @@ static int _mmc_sd_resume(struct mmc_host *host)
 
 	mmc_claim_host(host);
 
-#if defined(CONFIG_SEC_HYBRID_TRAY)
-	if (host->ops->get_cd && host->ops->get_cd(host) == 0) {
-		printk(KERN_NOTICE "%s is no card...\n", mmc_hostname(host));
-		goto no_card;
-	}
-#endif
 	if (!mmc_card_suspended(host->card))
 		goto out;
 
@@ -1318,9 +1275,6 @@ static int _mmc_sd_resume(struct mmc_host *host)
 #else
 	err = mmc_sd_init_card(host, host->card->ocr, host->card);
 #endif
-#if defined(CONFIG_SEC_HYBRID_TRAY)
-no_card:
-#endif
 	mmc_card_clr_suspended(host->card);
 
 	err = mmc_resume_clk_scaling(host);
@@ -1342,12 +1296,14 @@ static int mmc_sd_resume(struct mmc_host *host)
 {
 	int err = 0;
 
+	MMC_TRACE(host, "%s: Enter\n", __func__);
 	if (!(host->caps & MMC_CAP_RUNTIME_RESUME)) {
 		err = _mmc_sd_resume(host);
 		pm_runtime_set_active(&host->card->dev);
 		pm_runtime_mark_last_busy(&host->card->dev);
 	}
 	pm_runtime_enable(&host->card->dev);
+	MMC_TRACE(host, "%s: Exit err: %d\n", __func__, err);
 
 	return err;
 }
@@ -1403,6 +1359,11 @@ static int mmc_sd_power_restore(struct mmc_host *host)
 	mmc_claim_host(host);
 	ret = mmc_sd_init_card(host, host->card->ocr, host->card);
 	mmc_release_host(host);
+	if (ret) {
+		pr_err("%s: %s: mmc_sd_init_card_failed (%d)\n",
+				mmc_hostname(host), __func__, ret);
+		return ret;
+	}
 
 	ret = mmc_resume_clk_scaling(host);
 	if (ret)

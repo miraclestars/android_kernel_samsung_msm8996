@@ -26,6 +26,8 @@
 
 #include <linux/mmc/host.h>
 #include <linux/mmc/card.h>
+#include <linux/mmc/ring_buffer.h>
+
 #include <linux/mmc/slot-gpio.h>
 
 #include "core.h"
@@ -521,10 +523,6 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 
 	spin_lock_init(&host->lock);
 	init_waitqueue_head(&host->wq);
-	host->wlock_name = kasprintf(GFP_KERNEL,
-			"%s_detect", mmc_hostname(host));
-	wake_lock_init(&host->detect_wake_lock, WAKE_LOCK_SUSPEND,
-			host->wlock_name);
 	INIT_DELAYED_WORK(&host->detect, mmc_rescan);
 #ifdef CONFIG_PM
 	host->pm_notify.notifier_call = mmc_pm_notify;
@@ -540,8 +538,6 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 	host->max_req_size = PAGE_CACHE_SIZE;
 	host->max_blk_size = 512;
 	host->max_blk_count = PAGE_CACHE_SIZE / 512;
-
-	host->card_detect_cnt = 0;
 
 	return host;
 
@@ -793,6 +789,7 @@ int mmc_add_host(struct mmc_host *host)
 	mmc_add_host_debugfs(host);
 #endif
 	mmc_host_clk_sysfs_init(host);
+	mmc_trace_init(host);
 
 	err = sysfs_create_group(&host->class_dev.kobj, &clk_scaling_attr_grp);
 	if (err)
@@ -854,7 +851,6 @@ void mmc_free_host(struct mmc_host *host)
 	spin_lock(&mmc_host_lock);
 	idr_remove(&mmc_host_idr, host->index);
 	spin_unlock(&mmc_host_lock);
-	wake_lock_destroy(&host->detect_wake_lock);
 
 	put_device(&host->class_dev);
 }
