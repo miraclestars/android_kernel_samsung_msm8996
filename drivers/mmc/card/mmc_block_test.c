@@ -402,29 +402,16 @@ static int test_err_check(struct mmc_card *card, struct mmc_async_req *areq)
 {
 	struct mmc_queue_req *mq_rq = container_of(areq, struct mmc_queue_req,
 			mmc_active);
-	struct request_queue *req_q;
-	struct test_iosched *tios;
-	struct mmc_block_test_data *mbtd;
+	struct request_queue *req_q = mq_rq->req->q;
+	struct test_iosched *tios = req_q->elevator->elevator_data;
+	struct mmc_block_test_data *mbtd = tios->blk_dev_test_data;
 	struct mmc_queue *mq;
 	int max_packed_reqs;
 	int ret = 0;
 
-	if (mq_rq)
-		req_q = mq_rq->req->q;
-	else {
-		pr_err("%s: %s: NULL mq_rq", __func__,
-			mmc_hostname(card->host));
-		return 0;
-	}
-
-	if (req_q) {
+	if (req_q)
 		mq = req_q->queuedata;
-		tios = req_q->elevator->elevator_data;
-		if (tios)
-			mbtd = tios->blk_dev_test_data;
-		else
-			return 0;
-	} else {
+	else {
 		pr_err("%s: NULL request_queue", __func__);
 		return 0;
 	}
@@ -436,6 +423,12 @@ static int test_err_check(struct mmc_card *card, struct mmc_async_req *areq)
 	}
 
 	max_packed_reqs = mq->card->ext_csd.max_packed_writes;
+
+	if (!mq_rq) {
+		pr_err("%s: %s: NULL mq_rq", __func__,
+			mmc_hostname(card->host));
+		return 0;
+	}
 
 	switch (mbtd->test_info.testcase) {
 	case TEST_RET_ABORT:

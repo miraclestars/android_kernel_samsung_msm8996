@@ -21,6 +21,7 @@
 
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
+#include <linux/sched/rt.h>
 #include "queue.h"
 
 #define MMC_QUEUE_BOUNCESZ	65536
@@ -85,6 +86,11 @@ static inline void mmc_cmdq_ready_wait(struct mmc_host *host,
 {
 	struct mmc_cmdq_context_info *ctx = &host->cmdq_ctx;
 	struct request_queue *q = mq->queue;
+	struct sched_param scheduler_params = {0};
+
+	scheduler_params.sched_priority = 1;
+
+	sched_setscheduler(current, SCHED_FIFO, &scheduler_params);
 
 	/*
 	 * Wait until all of the following conditions are true:
@@ -145,6 +151,11 @@ static int mmc_queue_thread(void *d)
 	struct mmc_queue *mq = d;
 	struct request_queue *q = mq->queue;
 	struct mmc_card *card = mq->card;
+
+        struct sched_param scheduler_params = {0};
+        scheduler_params.sched_priority = 1;
+
+        sched_setscheduler(current, SCHED_FIFO, &scheduler_params);
 
 	current->flags |= PF_MEMALLOC;
 	if (card->host->wakeup_on_idle)
@@ -293,6 +304,9 @@ void mmc_cmdq_setup_queue(struct mmc_queue *mq, struct mmc_card *card)
 {
 	u64 limit = BLK_BOUNCE_HIGH;
 	struct mmc_host *host = card->host;
+
+	if (mmc_dev(host)->dma_mask && *mmc_dev(host)->dma_mask)
+		limit = *mmc_dev(host)->dma_mask;
 
 	queue_flag_set_unlocked(QUEUE_FLAG_NONROT, mq->queue);
 	if (mmc_can_erase(card))
@@ -476,15 +490,6 @@ success:
 
 	mq->thread = kthread_run(mmc_queue_thread, mq, "mmcqd/%d%s",
 		host->index, subname ? subname : "");
-
-#ifdef CONFIG_LARGE_DIRTY_BUFFER
-	if (mmc_card_sd(card)) {
-		/* apply more throttle on external sdcard */
-		mq->queue->backing_dev_info.max_ratio = 10;
-		mq->queue->backing_dev_info.min_ratio = 10;
-		mq->queue->backing_dev_info.capabilities |= BDI_CAP_STRICTLIMIT;
-	}
-#endif
 
 	if (IS_ERR(mq->thread)) {
 		ret = PTR_ERR(mq->thread);
@@ -772,28 +777,9 @@ int mmc_queue_suspend(struct mmc_queue *mq, int wait)
 			blk_start_queue(q);
 			spin_unlock_irqrestore(q->queue_lock, flags);
 			rc = -EBUSY;
-		} else if (wait) {
-			struct request *req;
-			printk("%s: mq->flags: %ld, q->queue_flags: 0x%lx, \
-					q->in_flight (%d, %d) \n",
-					mmc_hostname(mq->card->host), mq->flags,
-					q->queue_flags, q->in_flight[0], q->in_flight[1]);
-			mutex_lock(&q->sysfs_lock);
-			queue_flag_set_unlocked(QUEUE_FLAG_DYING, q);
-			spin_lock_irqsave(q->queue_lock, flags);
-			queue_flag_set(QUEUE_FLAG_DYING, q);
-
-			while ((req = blk_fetch_request(q)) != NULL) {
-				req->cmd_flags |= REQ_QUIET;
-				__blk_end_request_all(req, -EIO);
-			}
-
-			spin_unlock_irqrestore(q->queue_lock, flags);
-			mutex_unlock(&q->sysfs_lock);
-			if (rc) {
-				down(&mq->thread_sem);
-				rc = 0;
-			}
+		} else if (rc && wait) {
+			down(&mq->thread_sem);
+			rc = 0;
 		}
 	}
 out:
