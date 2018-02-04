@@ -598,6 +598,13 @@ config CPU_FREQ_DEFAULT_GOV_WAVE
 	select CPU_FREQ_GOV_WAVE
 	help
 
+config CPU_FREQ_DEFAULT_GOV_WHEATLEY
+	bool "wheatley"
+	select CPU_FREQ_GOV_WHEATLEY
+	select CPU_FREQ_GOV_PERFORMANCE
+	---help---
+	  Use the CPUFreq governor 'wheatley' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -1318,6 +1325,10 @@ config CPU_FREQ_GOV_UBERDEMAND_SECOND_PHASE_FREQ
 config CPU_FREQ_GOV_WAVE
 	tristate "'wave' cpufreq governor"
 	depends on CPU_FREQ
+
+config CPU_FREQ_GOV_WHEATLEY
+	tristate "'wheatley' cpufreq governor"
+	depends on CPU_FREQ	
 
 comment "CPU frequency scaling drivers"
 
