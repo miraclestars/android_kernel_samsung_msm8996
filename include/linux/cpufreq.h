@@ -663,6 +663,9 @@ extern struct cpufreq_governor cpufreq_gov_HYPER;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_HYPERX)
 extern struct cpufreq_governor cpufreq_gov_hyperx;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_hyperx)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_IMPULSE)
+extern struct cpufreq_governor cpufreq_gov_impulse;
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_impulse)
 #endif
 
 /*********************************************************************
