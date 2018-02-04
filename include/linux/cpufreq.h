@@ -298,6 +298,8 @@ struct cpufreq_driver {
 	void		(*stop_cpu)(struct cpufreq_policy *policy);
 	int		(*suspend)(struct cpufreq_policy *policy);
 	int		(*resume)(struct cpufreq_policy *policy);
+	unsigned int (*getavg)	(struct cpufreq_policy *policy,
+                            unsigned int cpu);
 
 	/* Will be called after the driver is fully initialized */
 	void		(*ready)(struct cpufreq_policy *policy);
@@ -576,6 +578,9 @@ extern struct cpufreq_governor cpufreq_gov_adaptive;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_ADAPTIVEX)
 extern struct cpufreq_governor cpufreq_gov_adaptivex;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_adaptivex)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_ALUCARD)
+extern struct cpufreq_governor cpufreq_gov_alucard;
+#define CPUFREQ_DEFAULT_GOVERNOR        (&cpufreq_gov_alucard)
 #endif
 
 /*********************************************************************
