@@ -447,6 +447,12 @@ config CPU_FREQ_DEFAULT_GOV_LIONFISH
 	help
 	  Use the CPUFreq governor 'lionfish' as default.
 
+config CPU_FREQ_DEFAULT_GOV_LIONHEART
+	bool "lionheart"
+	select CPU_FREQ_GOV_LIONHEART
+	help
+	  Use the CPUFreq governor 'lionheart' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -990,6 +996,13 @@ config CPU_FREQ_GOV_LIONFISH
 	  To compile this driver as a module, choose M here: the
 	  module will be called cpufreq_lionfish.
 
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_LIONHEART
+	tristate "'lionheart' cpufreq governor"
+	depends on CPU_FREQ
+	help
+	  lionheart' - a "smart" optimized governor!
 	  If in doubt, say N.
 
 comment "CPU frequency scaling drivers"
