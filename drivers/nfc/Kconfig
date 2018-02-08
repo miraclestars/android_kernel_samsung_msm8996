@@ -247,6 +247,7 @@ config ESE_SECURE_SPI_PORT
           You should select your NFC product and interface.
 
 source "drivers/nfc/pn544/Kconfig"
+source "drivers/nfc/pn548/Kconfig"
 source "drivers/nfc/microread/Kconfig"
 source "drivers/nfc/nfcmrvl/Kconfig"
 source "drivers/nfc/st21nfca/Kconfig"

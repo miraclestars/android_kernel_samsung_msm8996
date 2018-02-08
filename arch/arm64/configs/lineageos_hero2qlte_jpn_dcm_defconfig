@@ -1106,7 +1106,8 @@ CONFIG_RFKILL_LEDS=y
 # CONFIG_NET_9P is not set
 # CONFIG_CAIF is not set
 # CONFIG_CEPH_LIB is not set
-# CONFIG_NFC is not set
+CONFIG_NFC=y
+CONFIG_NFC_PN548=y
 CONFIG_SAMSUNG_NFC=y
 # CONFIG_NFC_PN533 is not set
 # CONFIG_NFC_SIM is not set
