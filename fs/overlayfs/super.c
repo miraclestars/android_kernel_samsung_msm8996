@@ -574,9 +574,9 @@ retry:
 			goto out_dput;
 
 		/* Clear any inherited mode bits */
-		inode_lock(work->d_inode);
+		mutex_lock(&work->d_inode->i_mutex);
 		err = notify_change(work, &attr, NULL);
-		inode_unlock(work->d_inode);
+		mutex_unlock(&work->d_inode->i_mutex);
 		if (err)
 			goto out_dput;
 	}
