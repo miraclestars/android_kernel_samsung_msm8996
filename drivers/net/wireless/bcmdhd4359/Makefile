@@ -261,7 +261,7 @@ DHDCFLAGS += -DDHD_LEGACY_FILE_PATH
 DHDCFLAGS += -DDHD_DISABLE_ANDROID_FEATURE_SET
 else
 # Extract version string and get major number
-ANDROID_PLATFORM_VERSION := $(shell grep "PLATFORM_VERSION := " $(FOUND_VERSION_PATH) | cut -d "=" -f 2 | cut -d "." -f 1 | sed 's/ //g')
+ANDROID_PLATFORM_VERSION := $(shell grep "PLATFORM_VERSION.OPM1 := " $(FOUND_VERSION_PATH) | cut -d "=" -f 2 | cut -d "." -f 1 | sed 's/ //g')
 $(warning Android Platform Version : $(ANDROID_PLATFORM_VERSION))
 # If Android version lower than 7(Nougat) => Use Legacy File path
 ifeq ($(shell expr $(ANDROID_PLATFORM_VERSION) \< 7),1)
