@@ -46,21 +46,6 @@ DEFINE_PER_CPU(struct tick_sched, tick_cpu_sched);
  * The time, when the last jiffy update happened. Protected by jiffies_lock.
  */
 static ktime_t last_jiffies_update;
-struct tick_sched saved_pcpu_ts[NR_CPUS];
-
-void save_pcpu_tick(int cpu)
-{
-	saved_pcpu_ts[cpu] = per_cpu(tick_cpu_sched, cpu);
-}
-EXPORT_SYMBOL(save_pcpu_tick);
-
-void restore_pcpu_tick(int cpu)
-{
-	struct tick_sched *ts = &per_cpu(tick_cpu_sched, cpu);
-	ts->idle_sleeptime = saved_pcpu_ts[cpu].idle_sleeptime;
-	ts->iowait_sleeptime = saved_pcpu_ts[cpu].iowait_sleeptime;
-}
-EXPORT_SYMBOL(restore_pcpu_tick);
 
 u64 jiffy_to_ktime_ns(u64 *now, u64 *jiffy_ktime_ns)
 {

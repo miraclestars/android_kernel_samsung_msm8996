@@ -395,8 +395,6 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen)
 		cpu_relax();
 
 	hotplug_cpu__broadcast_tick_pull(cpu);
-	save_pcpu_tick(cpu);
-
 	/* This actually kills the CPU. */
 	__cpu_die(cpu);
 
@@ -502,8 +500,6 @@ static int _cpu_up(unsigned int cpu, int tasks_frozen)
 	if (ret != 0)
 		goto out_notify;
 	BUG_ON(!cpu_online(cpu));
-
-	restore_pcpu_tick(cpu);
 
 	/* Now call notifier in preparation. */
 	cpu_notify(CPU_ONLINE | mod, hcpu);
