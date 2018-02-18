@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -45,7 +45,7 @@
 #include "sirMacPropExts.h"
 #include "sirCommon.h"
 #include "sirDebug.h"
-#include "wniCfgSta.h"
+#include "wni_cfg.h"
 #include "csrApi.h"
 #include "sapApi.h"
 #include "dot11f.h"
@@ -68,7 +68,11 @@
 #define IS_5G_BAND(__rfBand)     ((__rfBand & 0x3) == 0x2)
 #define IS_24G_BAND(__rfBand)    ((__rfBand & 0x3) == 0x1)
 
-#define LIM_MAX_CSA_IE_UPDATES                  ( 5 )
+#ifdef CHANNEL_HOPPING_ALL_BANDS
+#define CHAN_HOP_ALL_BANDS_ENABLE        1
+#else
+#define CHAN_HOP_ALL_BANDS_ENABLE        0
+#endif
 
 // enums exported by LIM are as follows
 
@@ -257,6 +261,11 @@ typedef struct sLimMlmJoinReq
     tSirMacRateSet         operationalRateSet;
     tANI_U8                 sessionId;
     tSirBssDescription     bssDescription;
+    /*
+     * WARNING: Pls make bssDescription as last variable in struct
+     * tLimMlmJoinReq as it has ieFields followed after this bss
+     * description. Adding a variable after this corrupts the ieFields
+     */
 } tLimMlmJoinReq, *tpLimMlmJoinReq;
 
 typedef struct sLimMlmScanReq

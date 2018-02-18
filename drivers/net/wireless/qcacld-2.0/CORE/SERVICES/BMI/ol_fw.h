@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014,2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -72,8 +72,13 @@
  * read might change
  */
 #define REGISTER_LOCATION       0x00000800
-
 #ifdef TARGET_DUMP_FOR_NON_QC_PLATFORM
+#ifdef HIF_SDIO
+#define REG_SIZE		0x0007F820
+#endif
+#endif
+
+#if defined(TARGET_DUMP_FOR_NON_QC_PLATFORM) && !defined(HIF_PCI)
 #define DRAM_LOCATION           0x00400000
 #ifdef HIF_USB
 #define DRAM_SIZE               0x00098000
@@ -109,7 +114,10 @@
 #define IRAM1_SIZE              0x00080000
 #define IRAM2_LOCATION          0x00a00000
 #define IRAM2_SIZE              0x00040000
-#elif defined(HIF_SDIO)
+#ifdef CONFIG_NON_QC_PLATFORM_PCI
+#define REG_SIZE		0x0007F820
+#endif
+#elif defined(HIF_SDIO) || defined(HIF_USB)
 #define IRAM_LOCATION           0x00980000
 #define IRAM_SIZE               0x000C0000
 #else /* ELSE HIF_PCI */
