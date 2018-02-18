@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -38,8 +38,7 @@
  */
 
 #include "palTypes.h"
-#include "wniCfgSta.h"
-
+#include "wni_cfg.h"
 #include "cfgApi.h"
 #include "pmmApi.h"
 #include "limApi.h"
@@ -360,10 +359,16 @@ static void __schBeaconProcessForSession( tpAniSirGlobal      pMac,
     vos_mem_zero(&beaconParams, sizeof(tUpdateBeaconParams));
     beaconParams.paramChangeBitmap = 0;
 
-    if (RF_CHAN_14 >= psessionEntry->currentOperChannel)
-        cbMode = pMac->roam.configParam.channelBondingMode24GHz;
-    else
+    if (RF_CHAN_14 >= psessionEntry->currentOperChannel) {
+        if (psessionEntry->force_24ghz_in_ht20)
+                cbMode =
+                     WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
+            else
+                cbMode =
+                     pMac->roam.configParam.channelBondingMode24GHz;
+    } else {
         cbMode = pMac->roam.configParam.channelBondingMode5GHz;
+    }
 
     if (LIM_IS_IBSS_ROLE(psessionEntry)) {
         limHandleIBSScoalescing(pMac, pBeacon,  pRxPacketInfo, psessionEntry);
@@ -529,8 +534,9 @@ static void __schBeaconProcessForSession( tpAniSirGlobal      pMac,
                 skip_opmode_update = true;
 
              if (!skip_opmode_update &&
-                 (operMode != pBeacon->OperatingMode.chanWidth))
-             {
+                 ((operMode != pBeacon->OperatingMode.chanWidth) ||
+                 (pStaDs->vhtSupportedRxNss !=
+                  (pBeacon->OperatingMode.rxNSS + 1)))) {
                 uint32_t fw_vht_ch_wd = wma_get_vht_ch_width();
                 PELOG1(schLog(pMac, LOG1,
                          FL(" received OpMode Chanwidth %d, staIdx = %d"),
@@ -717,6 +723,14 @@ static void __schBeaconProcessForSession( tpAniSirGlobal      pMac,
         limReceivedHBHandler(pMac, (tANI_U8)pBeacon->HTInfo.primaryChannel, psessionEntry);
     else
         limReceivedHBHandler(pMac, (tANI_U8)pBeacon->channelNumber, psessionEntry);
+
+    if (pBeacon->countryInfoPresent && pMac->sta_change_cc_via_beacon) {
+        schLog(pMac, LOG1, "beacon country code %c%c ssid: %s",
+               pBeacon->countryInfoParam.countryString[0],
+               pBeacon->countryInfoParam.countryString[1],
+               pBeacon->ssId.ssId);
+        lim_check_and_change_cc(pMac, pBeacon, psessionEntry);
+    }
 
     // I don't know if any additional IE is required here. Currently, not include addIE.
     if(sendProbeReq)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -47,6 +47,44 @@
 #include "rrmApi.h"
 #endif
 #include "vos_utils.h"
+
+#ifdef WLAN_FEATURE_FILS_SK
+/**
+ * lim_update_bss_with_fils_data: update fils data to bss descriptor
+ * if available in probe/beacon.
+ * @pr: probe response/beacon
+ * @bss_descr: pointer to bss descriptor
+ *
+ * @Return: None
+ */
+static void lim_update_bss_with_fils_data(tpSirProbeRespBeacon pr,
+                tSirBssDescription *bss_descr)
+{
+    if (!pr->fils_ind.is_present)
+        return;
+
+    if (pr->fils_ind.realm_identifier.realm_cnt > SIR_MAX_REALM_COUNT)
+        pr->fils_ind.realm_identifier.realm_cnt = SIR_MAX_REALM_COUNT;
+
+    bss_descr->fils_info_element.realm_cnt =
+        pr->fils_ind.realm_identifier.realm_cnt;
+    vos_mem_copy(bss_descr->fils_info_element.realm,
+        pr->fils_ind.realm_identifier.realm,
+        bss_descr->fils_info_element.realm_cnt * SIR_REALM_LEN);
+    if (pr->fils_ind.cache_identifier.is_present) {
+        bss_descr->fils_info_element.is_cache_id_present = true;
+        vos_mem_copy(bss_descr->fils_info_element.cache_id,
+            pr->fils_ind.cache_identifier.identifier, CACHE_ID_LEN);
+    }
+    if (pr->fils_ind.is_fils_sk_auth_supported)
+        bss_descr->fils_info_element.is_fils_sk_supported = true;
+}
+#else
+static inline void lim_update_bss_with_fils_data(tpSirProbeRespBeacon pr,
+                tSirBssDescription *bss_descr)
+{
+}
+#endif
 
 /**
  * limDeactiveMinChannelTimerDuringScan()
@@ -96,7 +134,58 @@ limDeactivateMinChannelTimerDuringScan(tpAniSirGlobal pMac)
     return eSIR_SUCCESS;
 } /*** end limDeactivateMinChannelTimerDuringScan() ***/
 
+/**
+ * lim_check_and_change_cc: indicate upper layer country code changed
+ * @mac_ptr: Pointer to Global MAC structure
+ * @beacon_ptr: pointer to beacon
+ * @session_ptr: pointer to session
+ *
+ * @Return: None
+ */
+void
+lim_check_and_change_cc(tpAniSirGlobal mac_ptr,
+			tpSirProbeRespBeacon beacon_ptr,
+			tpPESession session_ptr)
+{
 
+	tSirMsgQ  mmh_msg;
+	tANI_U16  msg_len = 0;
+	struct sme_change_country_code_ind *change_cc_ind_ptr = NULL;
+	v_BOOL_t country_code_not_changed;
+
+	limLog(mac_ptr, LOG1, FL("enter new cc %c%c  old cc: %c%c"),
+	       beacon_ptr->countryInfoParam.countryString[0],
+	       beacon_ptr->countryInfoParam.countryString[1],
+	       mac_ptr->scan.countryCodeCurrent[0],
+	       mac_ptr->scan.countryCodeCurrent[1]);
+
+	country_code_not_changed =
+		vos_mem_compare(beacon_ptr->countryInfoParam.countryString,
+				mac_ptr->scan.countryCodeCurrent,
+				VOS_COUNTRY_CODE_LEN);
+	if (FALSE == country_code_not_changed) {
+		msg_len = sizeof(*change_cc_ind_ptr);
+		change_cc_ind_ptr = vos_mem_malloc(msg_len);
+		if (NULL == change_cc_ind_ptr) {
+			limLog(mac_ptr, LOGE, FL("Mem alloc failed"));
+			return;
+		}
+
+		change_cc_ind_ptr->message_type = eWNI_SME_CC_CHANGE_IND;
+		change_cc_ind_ptr->msg_len = msg_len;
+		change_cc_ind_ptr->session_id = session_ptr->smeSessionId;
+		memcpy(change_cc_ind_ptr->country_code,
+		       beacon_ptr->countryInfoParam.countryString,
+		       VOS_COUNTRY_CODE_LEN);
+
+		mmh_msg.type = eWNI_SME_CC_CHANGE_IND;
+		mmh_msg.bodyptr = change_cc_ind_ptr;
+		mmh_msg.bodyval = 0;
+		limSysProcessMmhMsgApi(mac_ptr, &mmh_msg, ePROT);
+
+		return;
+	}
+}
 
 /**
  * limCollectBssDescription()
@@ -179,7 +268,7 @@ limCollectBssDescription(tpAniSirGlobal pMac,
                   sizeof(tSirMacAddr));
 
     // Copy Timestamp, Beacon Interval and Capability Info
-    pBssDescr->scanSysTimeMsec = vos_timer_get_system_time();
+    pBssDescr->scansystimensec = vos_get_bootbased_boottime_ns();
 
     pBssDescr->timeStamp[0]   = pBPR->timeStamp[0];
     pBssDescr->timeStamp[1]   = pBPR->timeStamp[1];
@@ -282,6 +371,9 @@ limCollectBssDescription(tpAniSirGlobal pMac,
         pBssDescr->QBSSLoad_present = TRUE;
         pBssDescr->QBSSLoad_avail = pBPR->QBSSLoad.avail;
     }
+#endif
+#ifdef WLAN_FEATURE_FILS_SK
+    lim_update_bss_with_fils_data(pBPR, pBssDescr);
 #endif
     // Copy IE fields
     vos_mem_copy((tANI_U8 *) &pBssDescr->ieFields,
@@ -428,8 +520,7 @@ limCheckAndAddBssDescription(tpAniSirGlobal pMac,
            ( pMac->lim.gLimReturnAfterFirstMatch & 0x01 ) &&
            (pMac->lim.gpLimMlmScanReq->numSsid) &&
            !limIsScanRequestedSSID(pMac, &pBPR->ssId)) ||
-          (!fFound && (pMac->lim.gpLimMlmScanReq &&
-                       pMac->lim.gpLimMlmScanReq->bssId) &&
+          (!fFound && (pMac->lim.gpLimMlmScanReq) &&
            !vos_mem_compare(bssid,
                            &pMac->lim.gpLimMlmScanReq->bssId, 6))))
     {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2015, 2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -53,6 +53,7 @@
 /*================ constants and types used in the rx API ===================*/
 
 #define HTT_RSSI_INVALID 0x7fff
+#define HTT_NOISE_FLOOR_INVALID 0x7f
 
 /**
  * @brief RX stats header
@@ -74,6 +75,8 @@ PREPACK struct ocb_rx_stats_hdr_t {
     A_INT16 rssi_cmb;
     /* rssi - rssi for chains 0 through 3 (for 20 MHz bandwidth) */
     A_INT16 rssi[4];
+    /* noise_floor - noise floor for chain 0-3, only chain0/1 valid for DSRC */
+    A_INT8 noise_floor[4];
     /* tsf32 - timestamp in TSF units */
     A_UINT32 tsf32;
     /* timestamp_microsec - timestamp in microseconds */
@@ -251,6 +254,10 @@ htt_rx_ind_rssi_dbm(htt_pdev_handle pdev, adf_nbuf_t rx_ind_msg);
 int16_t
 htt_rx_ind_rssi_dbm_chain(htt_pdev_handle pdev, adf_nbuf_t rx_ind_msg,
                           int8_t chain);
+
+int8_t
+htt_rx_ind_noise_floor_chain(htt_pdev_handle pdev, adf_nbuf_t rx_ind_msg,
+                             int8_t chain);
 
 void
 htt_rx_ind_legacy_rate(htt_pdev_handle pdev, adf_nbuf_t rx_ind_msg,
@@ -664,6 +671,15 @@ extern int
     adf_nbuf_t *tail_msdu);
 
 /**
+ * @brief Return the maximum number of available msdus currently
+ *
+ * @param pdev - the HTT instance the rx data was received on
+ */
+extern int
+(*htt_rx_offload_msdu_cnt)(
+    htt_pdev_handle pdev);
+
+/**
  * @brief Return a linked list of buffers holding one MSDU
  *  In some systems the buffers are delivered along with offload delivery
  *  indication message itself, while in other systems the buffers are uploaded
@@ -833,8 +849,8 @@ void
 htt_rx_frag_ind_flush_seq_num_range(
     htt_pdev_handle pdev,
     adf_nbuf_t rx_frag_ind_msg,
-    int *seq_num_start,
-    int *seq_num_end);
+    u_int16_t *seq_num_start,
+    u_int16_t *seq_num_end);
 /**
  * @brief Return the HL rx desc size
  * @param pdev - the HTT instance the rx data was received on
