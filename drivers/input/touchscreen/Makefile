@@ -94,3 +94,4 @@ obj-$(CONFIG_TOUCHSCREEN_GT9XX)		+= gt9xx/
 obj-$(CONFIG_TOUCHSCREEN_SEC_TS)	+= sec_ts/
 obj-$(CONFIG_TOUCHSCREEN_STM)		+= stm/
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_DSX2) += synaptics_dsx2/
+obj-$(CONFIG_SWEEP2SLEEP)		+= sweep2sleep.o
