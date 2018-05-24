@@ -1392,9 +1392,9 @@ static void __wait_all_discard_cmd(struct f2fs_sb_info *sbi,
 	}
 
 	/* wait all */
-	__init_discard_policy(sbi, &dp, DPOLICY_FSTRIM, 1);
+	init_discard_policy(&dp, DPOLICY_FSTRIM, 1);
 	__wait_discard_cmd_range(sbi, &dp, 0, UINT_MAX);
-	__init_discard_policy(sbi, &dp, DPOLICY_UMOUNT, 1);
+	init_discard_policy(&dp, DPOLICY_UMOUNT, 1);
 	__wait_discard_cmd_range(sbi, &dp, 0, UINT_MAX);
 }
 
