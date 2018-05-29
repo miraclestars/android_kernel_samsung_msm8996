@@ -1013,7 +1013,6 @@ static void __init_discard_policy(struct f2fs_sb_info *sbi,
 		dpolicy->min_interval = DEF_MIN_DISCARD_ISSUE_TIME;
 		dpolicy->max_interval = DEF_MAX_DISCARD_ISSUE_TIME;
 		dpolicy->io_aware = true;
-		dpolicy->sync = false;
 		if (utilization(sbi) > DEF_DISCARD_URGENT_UTIL) {
 			dpolicy->granularity = 1;
 			dpolicy->max_interval = DEF_MIN_DISCARD_ISSUE_TIME;
@@ -1392,9 +1391,9 @@ static void __wait_all_discard_cmd(struct f2fs_sb_info *sbi,
 	}
 
 	/* wait all */
-	init_discard_policy(&dp, DPOLICY_FSTRIM, 1);
+	__init_discard_policy(sbi, &dp, DPOLICY_FSTRIM, 1);
 	__wait_discard_cmd_range(sbi, &dp, 0, UINT_MAX);
-	init_discard_policy(&dp, DPOLICY_UMOUNT, 1);
+	__init_discard_policy(sbi, &dp, DPOLICY_UMOUNT, 1);
 	__wait_discard_cmd_range(sbi, &dp, 0, UINT_MAX);
 }
 
