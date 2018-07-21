@@ -5026,7 +5026,7 @@ static int hdd_extscan_passpoint_fill_network_list(
 		}
 		hddLog(LOG1, FL("realm: %s"), req_msg->networks[index].realm);
 
-		/* Parse and fetch roaming consortium ids */
+			/* Parse and fetch roaming consortium ids */
 		if (!network[PARAM_ROAM_ID]) {
 			hddLog(LOGE, FL("attr roaming consortium ids failed"));
 			return -EINVAL;
@@ -14270,21 +14270,21 @@ static int wlan_hdd_get_txrx_rate(hdd_adapter_t *adapter,
 								&staid)) {
 				hddLog(VOS_TRACE_LEVEL_ERROR,
 				   FL("Station MAC address does not matching"));
-				return -EFAULT;
-			}
-
-			adapter->aStaInfo[staid].tx_rate =
+				ret = -EFAULT;
+			} else {
+				adapter->aStaInfo[staid].tx_rate =
 						priv->peer_info_ext.tx_rate;
-			adapter->aStaInfo[staid].rx_rate =
+				adapter->aStaInfo[staid].rx_rate =
 						priv->peer_info_ext.rx_rate;
 
-			hddLog(VOS_TRACE_LEVEL_INFO,
-				"%s %pM tx rate %u rx rate %u",
-				__func__,
-				peer_macaddr,
-				adapter->aStaInfo[staid].tx_rate,
-				adapter->aStaInfo[staid].rx_rate);
-			ret = 0;
+				hddLog(VOS_TRACE_LEVEL_INFO,
+					"%s %pM tx rate %u rx rate %u",
+					__func__,
+					peer_macaddr,
+					adapter->aStaInfo[staid].tx_rate,
+					adapter->aStaInfo[staid].rx_rate);
+				ret = 0;
+			}
 		}
 	}
 
@@ -14658,7 +14658,7 @@ static int __wlan_hdd_cfg80211_fast_roaming(struct wiphy *wiphy,
 	 * defer out-network roaming. EBUSY is used to convey wait indication.
 	 */
 	if (!is_fast_roam_enabled) {
-		if (sme_staInMiddleOfRoaming(hdd_ctx->hHal,
+		if (smeNeighborMiddleOfRoaming(hdd_ctx->hHal,
 					adapter->sessionId)) {
 			hddLog(LOG1, FL("Roaming in progress, do not allow disable"));
 			return -EBUSY;
@@ -17532,6 +17532,7 @@ static int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
     v_SINT_t i;
     hdd_config_t *iniConfig;
     hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX(pHostapdAdapter);
+    hdd_adapter_t *sta_adapter;
     tSmeConfigParams *sme_config_ptr = NULL;
     v_BOOL_t MFPCapable =  VOS_FALSE;
     v_BOOL_t MFPRequired =  VOS_FALSE;
@@ -17541,6 +17542,31 @@ static int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
     ENTER();
 
     wlan_hdd_tdls_disable_offchan_and_teardown_links(pHddCtx);
+
+    /*
+     * For STA+SAP concurrency support from GUI, first STA connection gets
+     * triggered and while it is in progress, SAP start also comes up.
+     * Once STA association is successful, STA connect event is sent to
+     * kernel which gets queued in kernel workqueue and supplicant won't
+     * process M1 received from AP and send M2 until this NL80211_CONNECT
+     * event is received. Workqueue is not scheduled as RTNL lock is already
+     * taken by hostapd thread which has issued start_bss command to driver.
+     * Driver cannot complete start_bss as the pending command at the head
+     * of the SME command pending list is hw_mode_update for STA session
+     * which cannot be processed as SME is in WAITforKey state for STA
+     * interface. The start_bss command for SAP interface is queued behind
+     * the hw_mode_update command and so it cannot be processed until
+     * hw_mode_update command is processed. This is causing a deadlock so
+     * disconnect the STA interface first if connection or key exchange is
+     * in progress and then start SAP interface.
+     */
+    sta_adapter = hdd_get_sta_connection_in_progress(pHddCtx);
+    if (sta_adapter) {
+	hddLog(LOG1, FL("Disconnecting STA with session id: %d"),
+	       sta_adapter->sessionId);
+	wlan_hdd_disconnect(sta_adapter, eCSR_DISCONNECT_REASON_DEAUTH);
+    }
+
     iniConfig = pHddCtx->cfg_ini;
     pHostapdState = WLAN_HDD_GET_HOSTAP_STATE_PTR(pHostapdAdapter);
 
@@ -18514,6 +18540,18 @@ static int __wlan_hdd_cfg80211_stop_ap (struct wiphy *wiphy,
     hddLog(LOG1, FL("Device_mode %s(%d)"),
            hdd_device_mode_to_string(pAdapter->device_mode),
            pAdapter->device_mode);
+
+    /*
+     * if a sta connection is in progress in another adapter, disconnect
+     * the sta and complete the sap operation. sta will reconnect
+     * after sap stop is done.
+     */
+    staAdapter = hdd_get_sta_connection_in_progress(pHddCtx);
+    if (staAdapter) {
+	hddLog(LOG1, FL("disconnecting sta with session id: %d"),
+	       staAdapter->sessionId);
+	wlan_hdd_disconnect(staAdapter, eCSR_DISCONNECT_REASON_DEAUTH);
+    }
 
     if (WLAN_HDD_SOFTAP == pAdapter->device_mode)
         hdd_wlan_green_ap_stop_bss(pHddCtx);
@@ -23206,10 +23244,28 @@ static bool hdd_validate_fils_info_ptr(hdd_wext_state_t *wext_state)
 
     return true;
 }
+
+static bool wlan_hdd_is_akm_suite_fils(uint32_t key_mgmt)
+{
+	switch (key_mgmt) {
+	case WLAN_AKM_SUITE_FILS_SHA256:
+	case WLAN_AKM_SUITE_FILS_SHA384:
+	case WLAN_AKM_SUITE_FT_FILS_SHA256:
+	case WLAN_AKM_SUITE_FT_FILS_SHA384:
+		return true;
+	default:
+		return false;
+	}
+}
 #else
 static bool hdd_validate_fils_info_ptr(hdd_wext_state_t *wext_state)
 {
     return TRUE;
+}
+
+static bool wlan_hdd_is_akm_suite_fils(uint32_t key_mgmt)
+{
+	return false;
 }
 #endif
 
@@ -23226,7 +23282,8 @@ static int wlan_hdd_set_akm_suite( hdd_adapter_t *pAdapter,
     tCsrRoamProfile *roam_profile;
 
     roam_profile = &pWextState->roamProfile;
-    if (!hdd_validate_fils_info_ptr(pWextState))
+    if (wlan_hdd_is_akm_suite_fils(key_mgmt) &&
+        !hdd_validate_fils_info_ptr(pWextState))
         return -EINVAL;
 
     /* Should be in ieee802_11_defs.h */
@@ -23773,7 +23830,7 @@ static int wlan_hdd_cfg80211_set_fils_config(hdd_adapter_t *adapter,
         vos_mem_malloc(sizeof(struct cds_fils_connection_info));
 
     if (!roam_profile->fils_con_info) {
-        hddLog(VOS_TRACE_LEVEL_INFO,"failed to allocate memory");
+        hddLog(LOGE, "failed to allocate memory");
         return -EINVAL;
     }
     if (req->auth_type != NL80211_AUTHTYPE_FILS_SK) {
@@ -23781,13 +23838,15 @@ static int wlan_hdd_cfg80211_set_fils_config(hdd_adapter_t *adapter,
         return 0;
     }
 
-    roam_profile->fils_con_info->is_fils_connection = true;
-    roam_profile->fils_con_info->sequence_number = req->fils_erp_next_seq_num;
     auth_type = wlan_hdd_get_fils_auth_type(req->auth_type);
     if (auth_type < 0) {
-        hddLog(VOS_TRACE_LEVEL_INFO,"invalid auth type for fils %d", req->auth_type);
+        hddLog(LOGE, "invalid auth type for fils %d", req->auth_type);
         return -EINVAL;
     }
+
+    roam_profile->fils_con_info->is_fils_connection = true;
+    roam_profile->fils_con_info->sequence_number = req->fils_erp_next_seq_num;
+
     roam_profile->fils_con_info->auth_type = auth_type;
 
     roam_profile->fils_con_info->r_rk_length = req->fils_erp_rrk_len;
@@ -24291,10 +24350,6 @@ static int wlan_hdd_cfg80211_connect( struct wiphy *wiphy,
     return ret;
 }
 
-/*
- * FUNCTION: wlan_hdd_disconnect
- * This function is used to issue a disconnect request to SME
- */
 int wlan_hdd_disconnect( hdd_adapter_t *pAdapter, u16 reason )
 {
     int status, result = 0;
@@ -30528,6 +30583,11 @@ int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
         return 0;
     }
 
+    if (pHddCtx->prevent_suspend) {
+        hddLog(LOGE, FL("WOW is enabled in host while not supported in FW. Prevent suspend"));
+        return -EOPNOTSUPP;
+    }
+
     /* If RADAR detection is in progress (HDD), prevent suspend. The flag
      * "dfs_cac_block_tx" is set to TRUE when RADAR is found and stay TRUE until
      * CAC is done for a SoftAP which is in started state.
@@ -30588,7 +30648,7 @@ int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
            }
         }
 
-        if (sme_staInMiddleOfRoaming(pHddCtx->hHal, pAdapter->sessionId)) {
+        if (smeNeighborMiddleOfRoaming(pHddCtx->hHal, pAdapter->sessionId)) {
             hddLog(LOG1, FL("Roaming in progress, don't allow suspend"));
             return -EAGAIN;
         }

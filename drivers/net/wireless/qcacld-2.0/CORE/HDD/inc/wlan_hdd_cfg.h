@@ -3935,7 +3935,7 @@ enum dot11p_mode {
  */
 #define CFG_BTC_DYNAMIC_WLAN_BT_COEX           "gDynamicBTCOEX"
 #define CFG_BTC_DYNAMIC_WLAN_BT_COEX_MIN       (0)
-#define CFG_BTC_DYNAMIC_WLAN_BT_COEX_MAX       (1)
+#define CFG_BTC_DYNAMIC_WLAN_BT_COEX_MAX       (2)
 #define CFG_BTC_DYNAMIC_WLAN_BT_COEX_DEFAULT   (0)
 
 /**
@@ -4150,6 +4150,199 @@ FG_BTC_BT_INTERVAL_PAGE_P2P_STA_DEFAULT
 #define CFG_RX_AGGREGATION_SIZE_MIN      (1)
 #define CFG_RX_AGGREGATION_SIZE_MAX      (64)
 #define CFG_RX_AGGREGATION_SIZE_DEFAULT  (64)
+
+/*
+ * <ini>
+ * g_tx_aggr_retry_be - Configure Tx aggregation retry for BE
+ * @Min: 0
+ * @Max: 16
+ * @Default: 0
+ *
+ * g_tx_aggr_retry_be gives an option to configure Tx aggregation
+ * retry for BE. This can be useful in debugging throughput issues.
+ *
+ * Related: None
+ *
+ * Supported Feature: STA & SAP
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+
+#define CFG_TX_AGGR_SW_RETRY_BE      "g_tx_aggr_retry_be"
+#define CFG_TX_AGGR_SW_RETRY_BE_MIN      (0)
+#define CFG_TX_AGGR_SW_RETRY_BE_MAX      (16)
+#define CFG_TX_AGGR_SW_RETRY_BE_DEFAULT  (0)
+
+/*
+ * <ini>
+ * g_tx_aggr_retry_bk - Configure Tx aggregation retry for BK
+ * @Min: 0
+ * @Max: 16
+ * @Default: 0
+ *
+ * g_tx_aggr_retry_bk gives an option to configure Tx aggregation
+ * retry for BK. This can be useful in debugging throughput issues.
+ *
+ * Related: None
+ *
+ * Supported Feature: STA & SAP
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+
+#define CFG_TX_AGGR_SW_RETRY_BK      "g_tx_aggr_retry_bk"
+#define CFG_TX_AGGR_SW_RETRY_BK_MIN      (0)
+#define CFG_TX_AGGR_SW_RETRY_BK_MAX      (16)
+#define CFG_TX_AGGR_SW_RETRY_BK_DEFAULT  (0)
+
+/*
+ * <ini>
+ * g_tx_aggr_retry_vi - Configure Tx aggregation retry for VI
+ * @Min: 0
+ * @Max: 16
+ * @Default: 0
+ *
+ * g_tx_aggr_retry_vi gives an option to configure Tx aggregation
+ * retry for VI. This can be useful in debugging throughput issues.
+ *
+ * Related: None
+ *
+ * Supported Feature: STA & SAP
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+
+#define CFG_TX_AGGR_SW_RETRY_VI      "g_tx_aggr_retry_vi"
+#define CFG_TX_AGGR_SW_RETRY_VI_MIN      (0)
+#define CFG_TX_AGGR_SW_RETRY_VI_MAX      (16)
+#define CFG_TX_AGGR_SW_RETRY_VI_DEFAULT  (0)
+
+/*
+ * <ini>
+ * g_tx_aggr_retry_vo - Configure Tx aggregation retry for VO
+ * @Min: 0
+ * @Max: 16
+ * @Default: 0
+ *
+ * g_tx_aggr_retry_vo gives an option to configure Tx aggregation
+ * retry for VO. This can be useful in debugging throughput issues.
+ *
+ * Related: None
+ *
+ * Supported Feature: STA & SAP
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+
+#define CFG_TX_AGGR_SW_RETRY_VO      "g_tx_aggr_retry_vo"
+#define CFG_TX_AGGR_SW_RETRY_VO_MIN      (0)
+#define CFG_TX_AGGR_SW_RETRY_VO_MAX      (16)
+#define CFG_TX_AGGR_SW_RETRY_VO_DEFAULT  (0)
+
+/*
+ * <ini>
+ * g_tx_non_aggr_retry_be - Configure Tx non-aggregation retry for BE
+ * @Min: 0
+ * @Max: 16
+ * @Default: 0
+ *
+ * g_tx_non_aggr_retry_be gives an option to configure Tx
+ * non-aggregation sw retry for BE.
+ * This can be useful in debugging throughput issues.
+ *
+ * Related: None
+ *
+ * Supported Feature: STA & SAP
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+
+#define CFG_TX_NON_AGGR_SW_RETRY_BE      "g_tx_non_aggr_retry_be"
+#define CFG_TX_NON_AGGR_SW_RETRY_BE_MIN      (0)
+#define CFG_TX_NON_AGGR_SW_RETRY_BE_MAX      (16)
+#define CFG_TX_NON_AGGR_SW_RETRY_BE_DEFAULT  (0)
+
+/*
+ * <ini>
+ * g_tx_non_aggr_retry_bk - Configure Tx non-aggregation retry for BK
+ * @Min: 0
+ * @Max: 16
+ * @Default: 0
+ *
+ * g_tx_non_aggr_retry_bk gives an option to configure Tx non-aggregation
+ * retry for BK. This can be useful in debugging throughput issues.
+ *
+ * Related: None
+ *
+ * Supported Feature: STA & SAP
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+
+#define CFG_TX_NON_AGGR_SW_RETRY_BK      "g_tx_non_aggr_retry_bk"
+#define CFG_TX_NON_AGGR_SW_RETRY_BK_MIN      (0)
+#define CFG_TX_NON_AGGR_SW_RETRY_BK_MAX      (16)
+#define CFG_TX_NON_AGGR_SW_RETRY_BK_DEFAULT  (0)
+
+/*
+ * <ini>
+ * g_tx_non_aggr_retry_vi - Configure Tx non-aggregation retry for VI
+ * @Min: 0
+ * @Max: 16
+ * @Default: 0
+ *
+ * g_tx_non_aggr_retry_vi gives an option to configure Tx non aggregation
+ * retry for VI. This can be useful in debugging throughput issues.
+ *
+ * Related: None
+ *
+ * Supported Feature: STA & SAP
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+
+#define CFG_TX_NON_AGGR_SW_RETRY_VI      "g_tx_non_aggr_retry_vi"
+#define CFG_TX_NON_AGGR_SW_RETRY_VI_MIN      (0)
+#define CFG_TX_NON_AGGR_SW_RETRY_VI_MAX      (16)
+#define CFG_TX_NON_AGGR_SW_RETRY_VI_DEFAULT  (0)
+
+/*
+ * <ini>
+ * g_tx_non_aggr_retry_vo - Configure Tx aggregation retry for VO
+ * @Min: 0
+ * @Max: 16
+ * @Default: 0
+ *
+ * g_tx_non_aggr_retry_vo gives an option to configure Tx non-aggregation
+ * retry for VO. This can be useful in debugging throughput issues.
+ *
+ * Related: None
+ *
+ * Supported Feature: STA & SAP
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+
+#define CFG_TX_NON_AGGR_SW_RETRY_VO      "g_tx_non_aggr_retry_vo"
+#define CFG_TX_NON_AGGR_SW_RETRY_VO_MIN      (0)
+#define CFG_TX_NON_AGGR_SW_RETRY_VO_MAX      (16)
+#define CFG_TX_NON_AGGR_SW_RETRY_VO_DEFAULT  (0)
 
 /*
  * fine timing measurement capability information
@@ -4722,8 +4915,8 @@ FG_BTC_BT_INTERVAL_PAGE_P2P_STA_DEFAULT
 #define CFG_ENABLE_5G_BAND_PREF_DEFAULT          (0)
 
 #define CFG_5G_RSSI_BOOST_THRESHOLD_NAME         "5g_rssi_boost_threshold"
-#define CFG_5G_RSSI_BOOST_THRESHOLD_MIN          (-55)
-#define CFG_5G_RSSI_BOOST_THRESHOLD_MAX          (-70)
+#define CFG_5G_RSSI_BOOST_THRESHOLD_MIN          (-70)
+#define CFG_5G_RSSI_BOOST_THRESHOLD_MAX          (-55)
 #define CFG_5G_RSSI_BOOST_THRESHOLD_DEFAULT      (-60)
 
 #define CFG_5G_RSSI_BOOST_FACTOR_NAME            "5g_rssi_boost_factor"
@@ -4744,8 +4937,8 @@ FG_BTC_BT_INTERVAL_PAGE_P2P_STA_DEFAULT
  */
 
 #define CFG_5G_RSSI_PENALIZE_THRESHOLD_NAME      "5g_rssi_penalize_threshold"
-#define CFG_5G_RSSI_PENALIZE_THRESHOLD_MIN       (-65)
-#define CFG_5G_RSSI_PENALIZE_THRESHOLD_MAX       (-80)
+#define CFG_5G_RSSI_PENALIZE_THRESHOLD_MIN       (-80)
+#define CFG_5G_RSSI_PENALIZE_THRESHOLD_MAX       (-65)
 #define CFG_5G_RSSI_PENALIZE_THRESHOLD_DEFAULT   (-70)
 
 #define CFG_5G_RSSI_PENALIZE_FACTOR_NAME         "5g_rssi_penalize_factor"
@@ -5928,6 +6121,14 @@ struct hdd_config {
    bool                        g_use_otpmac;
    uint32_t                    tx_aggregation_size;
    uint32_t                    rx_aggregation_size;
+   uint32_t                    tx_aggr_sw_retry_threshhold_be;
+   uint32_t                    tx_aggr_sw_retry_threshhold_bk;
+   uint32_t                    tx_aggr_sw_retry_threshhold_vi;
+   uint32_t                    tx_aggr_sw_retry_threshhold_vo;
+   uint32_t                    tx_non_aggr_sw_retry_threshhold_be;
+   uint32_t                    tx_non_aggr_sw_retry_threshhold_bk;
+   uint32_t                    tx_non_aggr_sw_retry_threshhold_vi;
+   uint32_t                    tx_non_aggr_sw_retry_threshhold_vo;
    bool                        bug_report_for_scan_results;
    bool                        enable_edca_params;
    uint32_t                    edca_vo_cwmin;
