@@ -737,10 +737,12 @@ static void __diag_fwd_open(struct diagfwd_info *fwd_info)
 	if (!fwd_info->inited)
 		return;
 
-	if (fwd_info->buf_1)
-		atomic_set(&fwd_info->buf_1->in_busy, 0);
-	if (fwd_info->buf_2)
-		atomic_set(&fwd_info->buf_2->in_busy, 0);
+	if (driver->logging_mode != DIAG_USB_MODE) {
+		if (fwd_info->buf_1)
+			atomic_set(&fwd_info->buf_1->in_busy, 0);
+		if (fwd_info->buf_2)
+			atomic_set(&fwd_info->buf_2->in_busy, 0);
+	}
 
 	if (fwd_info->p_ops && fwd_info->p_ops->open) {
 		DIAG_LOG(DIAG_DEBUG_PERIPHERALS,"calling openon transport type for peripheral %d type %d transport %d\n",fwd_info->peripheral,fwd_info->type,fwd_info->transport);
