@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011-2015 NXP Semiconductors.
- * Copyright (C) 2016 Samsung, Inc.
+ * Copyright (C) 2018 Samsung, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -261,7 +261,7 @@ static long pn548_dev_ioctl(struct file *filp,
 	return 0;
 }
 
-static int iOpenFailCnt;
+static int iOpenFailCnt = 0;
 static int pn548_dev_open(struct inode *inode, struct file *filp)
 {
 	int ret = 0;
@@ -352,7 +352,6 @@ static int pn548_clk_enable(struct device *dev)
 
 static void pn548_clk_disable(void)
 {
-
 	clk_unprepare(clk_rf);
 	clk_put(clk_rf);
 	clk_rf = NULL;
