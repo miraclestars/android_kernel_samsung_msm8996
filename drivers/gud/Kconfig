@@ -24,7 +24,7 @@ config TRUSTONIC_TEE_DEBUG
       Enable the debug mode in the Trustonic TEE Driver.
 
 config TRUSTONIC_TRUSTED_UI
-    tristate "Trustonic Trusted UI"
+    bool "Trustonic Trusted UI"
     depends on TRUSTONIC_TEE
     ---help---
       Enable Trustonic Trusted User Interface

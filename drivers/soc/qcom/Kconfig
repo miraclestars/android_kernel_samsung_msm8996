@@ -337,26 +337,6 @@ menuconfig MSM_SCM_XPU
 	bool "MSM XPU configuration driver"
 	depends on MSM_SCM
 
-if MSM_SCM_XPU
-
-choice
-	prompt "XPU Violation Behavior"
-	default MSM_XPU_ERR_FATAL
-
-config MSM_XPU_ERR_FATAL
-	bool "Configure XPU violations as fatal errors"
-	help
-	 Select if XPU violations have to be configured as fatal errors.
-
-config MSM_XPU_ERR_NONFATAL
-	bool "Configure XPU violations as non-fatal errors"
-	help
-	 Select if XPU violations have to be configured as non-fatal errors.
-
-endchoice
-
-endif
-
 config MSM_SCM_ERRATA
 	depends on DEBUG_FS
 	depends on MSM_SCM
@@ -918,7 +898,7 @@ config TIMA_UEVENT
          Uevent messages for TIMA PKM/LKM
 
 config TIMA_LOG
-       bool "Log dumping support for TIMA"
+       tristate "Log dumping support for TIMA"
        depends on TIMA
        default n
        help

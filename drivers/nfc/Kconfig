@@ -97,28 +97,15 @@ config SEC_NFC
           Say Y here to compile support for SAMSUNG NFC driver into the
           kernel.
 
-choice
-        prompt "SEC NFC Products"
-        depends on SEC_NFC
-        default SEC_NFC_PRODUCT_N5
-config SEC_NFC_PRODUCT_N3
-        bool "N3"
 config SEC_NFC_PRODUCT_N5
-        bool "N5"
-endchoice
-
-choice
-        prompt "SEC NFC Interface"
+        bool "SEC NFC Products N5"
         depends on SEC_NFC
-        default SEC_NFC_IF_I2C
-config SEC_NFC_IF_UART
-        bool "UART"
+        default y
+
 config SEC_NFC_IF_I2C
-        bool "I2C"
-config SEC_NFC_IF_I2C_GPIO
-        bool "I2C-GPIO (S/W-I2C)"
-        select I2C_ALGOBIT
-endchoice
+        bool "SEC NFC Interface"
+        depends on SEC_NFC
+        default y
 
 config SEC_NFC_CLK_REQ
         bool "External clock control (RF clock)"
