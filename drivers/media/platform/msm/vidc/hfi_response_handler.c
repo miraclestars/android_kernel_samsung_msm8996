@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -112,6 +112,10 @@ static int hfi_process_sess_evt_seq_changed(u32 device_id,
 	u8 *data_ptr;
 	int prop_id;
 	enum msm_vidc_pixel_depth luma_bit_depth, chroma_bit_depth;
+	struct hfi_colour_space *colour_info;
+
+	 /* Initialize pic_struct to unknown as default */
+	event_notify.pic_struct = MSM_VIDC_PIC_STRUCT_UNKNOWN;
 
 	if (sizeof(struct hfi_msg_event_notify_packet) > pkt->size) {
 		dprintk(VIDC_ERR,
@@ -204,6 +208,18 @@ static int hfi_process_sess_evt_seq_changed(u32 device_id,
 						pic_struct->progressive_only);
 				data_ptr +=
 					sizeof(struct hfi_pic_struct);
+				break;
+			case HFI_PROPERTY_PARAM_VDEC_COLOUR_SPACE:
+				data_ptr = data_ptr + sizeof(u32);
+				colour_info =
+					(struct hfi_colour_space *) data_ptr;
+				event_notify.colour_space =
+					colour_info->colour_space;
+				dprintk(VIDC_DBG,
+					"Colour space value is: %d\n",
+						colour_info->colour_space);
+				data_ptr +=
+					sizeof(struct hfi_colour_space);
 				break;
 			default:
 				dprintk(VIDC_ERR,
@@ -1355,6 +1371,22 @@ static int hfi_process_session_flush_done(u32 device_id,
 	cmd_done.session_id = (void *)(uintptr_t)pkt->session_id;
 	cmd_done.status = hfi_map_err_status(pkt->error_type);
 	cmd_done.size = sizeof(u32);
+
+	switch (pkt->flush_type) {
+	case HFI_FLUSH_OUTPUT:
+		cmd_done.data.flush_type = HAL_FLUSH_OUTPUT;
+		break;
+	case HFI_FLUSH_INPUT:
+		cmd_done.data.flush_type = HAL_FLUSH_INPUT;
+		break;
+	case HFI_FLUSH_ALL:
+		cmd_done.data.flush_type = HAL_FLUSH_ALL;
+		break;
+	default:
+		dprintk(VIDC_ERR,
+				"%s: invalid flush type!", __func__);
+		return -EINVAL;
+	}
 
 	*info = (struct msm_vidc_cb_info) {
 		.response_type =  HAL_SESSION_FLUSH_DONE,
