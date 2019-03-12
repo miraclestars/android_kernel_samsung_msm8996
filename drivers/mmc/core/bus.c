@@ -174,10 +174,8 @@ static int mmc_bus_suspend(struct device *dev)
 			return ret;
 	}
 
-#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 	if (mmc_bus_needs_resume(host))
 		return 0;
-#endif
 
 	ret = host->bus_ops->suspend(host);
 
@@ -204,19 +202,17 @@ static int mmc_bus_resume(struct device *dev)
 	struct mmc_host *host = card->host;
 	int ret = 0;
 
-#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 	if (mmc_bus_manual_resume(host)) {
 		host->bus_resume_flags |= MMC_BUSRESUME_NEEDS_RESUME;
-	} else {
-#else
-	{
-#endif
-		ret = host->bus_ops->resume(host);
-		if (ret)
-			pr_warn("%s: error %d during resume (card was removed?)\n",
-					mmc_hostname(host), ret);
+		goto skip_full_resume;
 	}
 
+	ret = host->bus_ops->resume(host);
+	if (ret)
+		pr_warn("%s: error %d during resume (card was removed?)\n",
+			mmc_hostname(host), ret);
+
+skip_full_resume:
 	if (dev->driver && drv->resume)
 		ret = drv->resume(card);
 
