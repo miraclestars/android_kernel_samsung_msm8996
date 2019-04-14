@@ -255,6 +255,10 @@ static int sio_init_queue(struct request_queue *q, struct elevator_type *e)
 	}
 	eq->elevator_data = sd;
 
+	spin_lock_irq(q->queue_lock);
+	q->elevator = eq;
+	spin_unlock_irq(q->queue_lock);
+
 	/* Initialize fifo lists */
 	INIT_LIST_HEAD(&sd->fifo_list[SYNC][READ]);
 	INIT_LIST_HEAD(&sd->fifo_list[SYNC][WRITE]);
@@ -268,10 +272,7 @@ static int sio_init_queue(struct request_queue *q, struct elevator_type *e)
 	sd->fifo_expire[ASYNC][READ] = async_read_expire;
 	sd->fifo_expire[ASYNC][WRITE] = async_write_expire;
 	sd->fifo_batch = fifo_batch;
-
-	spin_lock_irq(q->queue_lock);
-	q->elevator = eq;
-	spin_unlock_irq(q->queue_lock);
+	sd->writes_starved = writes_starved;
 
 	return 0;
 }
