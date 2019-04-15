@@ -345,6 +345,13 @@ config CPU_FREQ_DEFAULT_GOV_ELECTRON
 	  loading your cpufreq low-level hardware driver, using the
 	  'electron' governor for latency-sensitive workloads.
 
+config CPU_FREQ_DEFAULT_GOV_ELEMENTALX
+	bool "elementalx"
+	select CPU_FREQ_GOV_ELEMENTALX
+	select CPU_FREQ_GOV_PERFORMANCE
+	help
+	  Use the CPUFreq governor 'elementalx' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -713,6 +720,19 @@ config CPU_FREQ_GOV_ELECTRON
 	depends on CPU_FREQ
 	help
 	  'electron' - another tuned interactive with extra options
+
+config CPU_FREQ_GOV_ELEMENTALX
+	tristate "'elementalx' cpufreq policy governor"
+	select CPU_FREQ_TABLE
+	help
+	  'elementalx' - This driver adds a dynamic cpufreq policy governor.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_elementalx.
+
+	  For details, take a look at linux/Documentation/cpu-freq.
+
+	  If in doubt, say N.
 
 comment "CPU frequency scaling drivers"
 
