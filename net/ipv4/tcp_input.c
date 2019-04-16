@@ -387,6 +387,9 @@ static int __tcp_grow_window(const struct sock *sk, const struct sk_buff *skb)
 static void tcp_grow_window(struct sock *sk, const struct sk_buff *skb)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
+	int room;
+
+	room = min_t(int, tp->window_clamp, tcp_space(sk)) - tp->rcv_ssthresh;
 #ifdef CONFIG_MPTCP
 	struct sock *meta_sk = mptcp(tp) ? mptcp_meta_sk(sk) : sk;
 	struct tcp_sock *meta_tp = tcp_sk(meta_sk);
@@ -396,11 +399,10 @@ static void tcp_grow_window(struct sock *sk, const struct sk_buff *skb)
 #ifdef CONFIG_MPTCP
 	if (meta_tp->rcv_ssthresh < meta_tp->window_clamp &&
 	    (int)meta_tp->rcv_ssthresh < tcp_space(meta_sk) &&
-#else
-	if (tp->rcv_ssthresh < tp->window_clamp &&
-	    (int)tp->rcv_ssthresh < tcp_space(sk) &&
-#endif
 	    !sk_under_memory_pressure(sk)) {
+#else
+	if (room > 0 && !sk_under_memory_pressure(sk)) {
+#endif
 		int incr;
 
 		/* Check #2. Increase window, if skb with such overhead
@@ -422,8 +424,7 @@ static void tcp_grow_window(struct sock *sk, const struct sk_buff *skb)
 			meta_tp->rcv_ssthresh = min(meta_tp->rcv_ssthresh + incr,
 					            meta_tp->window_clamp);
 #else
-			tp->rcv_ssthresh = min(tp->rcv_ssthresh + incr,
-					       tp->window_clamp);
+			tp->rcv_ssthresh += min(room, incr);
 #endif
 			inet_csk(sk)->icsk_ack.quick |= 1;
 		}
