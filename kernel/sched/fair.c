@@ -8470,6 +8470,10 @@ static void attach_one_task(struct rq *rq, struct task_struct *p)
 {
 	raw_spin_lock(&rq->lock);
 	attach_task(rq, p);
+	/*
+	 * We want to potentially raise target_cpu's OPP.
+	 */
+	update_capacity_of(cpu_of(rq));
 	raw_spin_unlock(&rq->lock);
 }
 
@@ -8490,6 +8494,11 @@ static void attach_tasks(struct lb_env *env)
 
 		attach_task(env->dst_rq, p);
 	}
+
+	/*
+	 * We want to potentially raise env.dst_cpu's OPP.
+	 */
+	update_capacity_of(env->dst_cpu);
 
 	raw_spin_unlock(&env->dst_rq->lock);
 }
@@ -9935,6 +9944,11 @@ more_balance:
 		 * ld_moved     - cumulative load moved across iterations
 		 */
 		cur_ld_moved = detach_tasks(&env);
+		/*
+		 * We want to potentially lower env.src_cpu's OPP.
+		 */
+		if (cur_ld_moved)
+			update_capacity_of(env.src_cpu);
 
 		/*
 		 * We've detached some tasks from busiest_rq. Every
@@ -10374,9 +10388,13 @@ static int active_load_balance_cpu_stop(void *data)
 		if (p) {
 			schedstat_inc(sd, alb_pushed);
 			moved = true;
-		} else {
-			schedstat_inc(sd, alb_failed);
+			/*
+			 * We want to potentially lower env.src_cpu's OPP.
+			 */
+			update_capacity_of(env.src_cpu);
 		}
+		else
+			schedstat_inc(sd, alb_failed);
 	}
 	rcu_read_unlock();
 out_unlock:
