@@ -162,6 +162,16 @@ config CPU_FREQ_DEFAULT_GOV_ABYSSPLUGV2
 	  the help section of the driver. Fallback governor will be the
 	  performance governor.
 
+config CPU_FREQ_DEFAULT_GOV_ADAPTIVE
+	bool "adaptive"
+	select CPU_FREQ_GOV_ADAPTIVE
+	---help---
+	  Use the CPUFreq governor 'adaptive' as default. This allows
+	  you to get a full dynamic cpu frequency capable system by simply
+	  loading your cpufreq low-level hardware driver, using the
+	  'adaptive' governor for latency-sensitive workloads and demanding
+	  performance.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -307,6 +317,28 @@ config CPU_FREQ_GOV_ABYSSPLUGV2
 	  devices.
 	  If you don't have one of these architectures or devices, use
 	  'ondemand' instead.
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_ADAPTIVE
+	tristate "'adaptive' cpufreq policy governor"
+	default n
+	help
+	  'adaptive' - This driver adds a dynamic cpufreq policy governor
+	  designed for latency-sensitive workloads and also for demanding
+	  performance.
+
+	  This governor attempts to reduce the latency of clock
+	  increases so that the system is more responsive to
+	  interactive workloads in loweset steady-state but to
+	  to reduce power consumption in middle operation level level up
+	  will be done in step by step to prohibit system from going to
+	  max operation level.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_adaptive.
+
+	  For details, take a look at linux/Documentation/cpu-freq.
+
 	  If in doubt, say N.
 
 comment "CPU frequency scaling drivers"
