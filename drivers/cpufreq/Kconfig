@@ -279,6 +279,12 @@ config CPU_FREQ_DEFAULT_GOV_CLARITY
 	  loading your cpufreq low-level hardware driver, using the
 	  'clarity' governor for latency-sensitive workloads.
 
+config CPU_FREQ_DEFAULT_GOV_CONSERVATIVEX
+	bool "conservativex"
+	select CPU_FREQ_GOV_CONSERVATIVEX
+	help
+	  Use the CPUFreq governor 'conservativex' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -576,6 +582,16 @@ config CPU_FREQ_GOV_CLARITY
 	help
 	  'clarity' - This driver adds a dynamic cpufreq policy governor
 	  designed for latency-sensitive workloads.
+
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_CONSERVATIVEX
+	tristate "'conservativex' cpufreq policy governor"
+	depends on CPU_FREQ
+	default y
+	help
+	  'conservativex' - A less aggressive version of
+	  the conservativex governor (higher performance).
 
 	  If in doubt, say N.
 
