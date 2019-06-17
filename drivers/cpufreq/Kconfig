@@ -320,6 +320,12 @@ config CPU_FREQ_DEFAULT_GOV_DESPAIR
 	help
 	  Use the CPUFreq governor 'despair' as default.
 
+config CPU_FREQ_DEFAULT_GOV_DYNAMIC_INTERACTIVE
+        bool "dynamic_interactive"
+        select CPU_FREQ_GOV_DYNAMIC_INTERACTIVE
+        help
+          Use the CPUFreq governor 'dynamic_interactive' as default
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -668,6 +674,10 @@ config CPU_FREQ_GOV_DESPAIR
 	  capable processors. Optimised for use in a battery environment.
 
 	  If in doubt, say N.
+
+config CPU_FREQ_GOV_DYNAMIC_INTERACTIVE
+	tristate "'dynamic_interactive' cpufreq governor"
+	depends on CPU_FREQ
 
 comment "CPU frequency scaling drivers"
 
