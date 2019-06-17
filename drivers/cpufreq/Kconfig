@@ -291,6 +291,12 @@ config CPU_FREQ_DEFAULT_GOV_CULTIVATION
 	help
 	  Use the CPUFreq governor 'cultivation' as default.
 
+config CPU_FREQ_DEFAULT_GOV_CYAN
+	bool "cyan"
+	select CPU_FREQ_GOV_CYAN
+	help
+	  'cyan' - an interactive based optimized governor!
+	      
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -606,6 +612,13 @@ config CPU_FREQ_GOV_CULTIVATION
 	depends on CPU_FREQ
 	help
 	  'cultivation' - another tuned interactive with extra options
+
+config CPU_FREQ_GOV_CYAN
+	tristate "'cyan' cpufreq governor"
+	depends on CPU_FREQ
+	default y
+	help
+	  'cyan' - an interactive based optimized governor!
 
 comment "CPU frequency scaling drivers"
 
