@@ -314,6 +314,12 @@ config CPU_FREQ_DEFAULT_GOV_DARKNESSV5
         select CPU_FREQ_GOV_DARKNESSV5
 	help
 
+config CPU_FREQ_DEFAULT_GOV_DESPAIR
+	bool "despair"
+	select CPU_FREQ_GOV_DESPAIR
+	help
+	  Use the CPUFreq governor 'despair' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -652,6 +658,16 @@ config CPU_FREQ_GOV_DARKNESS
 config CPU_FREQ_GOV_DARKNESSV5
 	tristate "'darknessv5' cpufreq governor"
 	depends on CPU_FREQ
+
+config CPU_FREQ_GOV_DESPAIR
+	tristate "'despair' cpufreq governor"
+	depends on CPU_FREQ
+	default y
+	help
+	  'despair' - A dynamic cpufreq governor for low Latency Frequency Transition 
+	  capable processors. Optimised for use in a battery environment.
+
+	  If in doubt, say N.
 
 comment "CPU frequency scaling drivers"
 
