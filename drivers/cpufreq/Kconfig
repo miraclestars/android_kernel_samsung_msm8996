@@ -453,6 +453,11 @@ config CPU_FREQ_DEFAULT_GOV_LIONHEART
 	help
 	  Use the CPUFreq governor 'lionheart' as default.
 
+config CPU_FREQ_DEFAULT_GOV_MYTHX_PLUG
+	bool "mythx_plug"
+	select CPU_FREQ_GOV_MYTHX_PLUG
+	help
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -1004,6 +1009,10 @@ config CPU_FREQ_GOV_LIONHEART
 	help
 	  lionheart' - a "smart" optimized governor!
 	  If in doubt, say N.
+
+config CPU_FREQ_GOV_MYTHX_PLUG
+	tristate "'mythx_plug' cpufreq governor"
+	depends on CPU_FREQ
 
 comment "CPU frequency scaling drivers"
 

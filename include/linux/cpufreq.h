@@ -690,6 +690,9 @@ extern struct cpufreq_governor cpufreq_gov_lionfish;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_LIONHEART)
 extern struct cpufreq_governor cpufreq_gov_lionheart;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_lionheart)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_MYTHX_PLUG)
+extern struct cpufreq_governor cpufreq_gov_mythx_plug;
+#define CPUFREQ_DEFAULT_GOVERNOR        (&cpufreq_gov_mythx_plug)
 #endif
 
 /*********************************************************************
