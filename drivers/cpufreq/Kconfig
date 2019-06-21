@@ -566,6 +566,15 @@ config CPU_FREQ_DEFAULT_GOV_SMARTMAX
 	help
 	  Use the CPUFreq governor 'smartmax' as default.
 
+config CPU_FREQ_DEFAULT_GOV_THUNDERSTORMS_INTERACTIVE
+	bool "thunderstorms_interactive"
+	select CPU_FREQ_GOV_THUNDERSTORMS_INTERACTIVE
+	help
+	  Use the CPUFreq governor 'thunderstorms interactive' as default. This allows
+	  you to get a full dynamic cpu frequency capable system by simply
+	  loading your cpufreq low-level hardware driver, using the
+	  'thunderstorms_interactive' governor for latency-sensitive workloads.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -1256,6 +1265,10 @@ config CPU_FREQ_GOV_SMARTMAX
 	  For details, take a look at linux/Documentation/cpu-freq.
 
 	  If in doubt, say N.
+
+config CPU_FREQ_GOV_THUNDERSTORMS_INTERACTIVE
+	tristate "'thunderstorms_interactive' cpufreq policy governor"
+	depends on CPU_FREQ
 
 comment "CPU frequency scaling drivers"
 
