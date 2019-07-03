@@ -198,6 +198,12 @@ config CPU_FREQ_DEFAULT_GOV_ARTERACTIVE
 	  loading your cpufreq low-level hardware driver, using the
 	  'arteractive' governor for latency-sensitive workloads.
 
+config CPU_FREQ_DEFAULT_GOV_ASSWAX
+            bool "asswax"
+            select CPU_FREQ_GOV_ASSWAX
+            help
+              Use the CPUFreq governor 'asswax' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -399,6 +405,13 @@ config CPU_FREQ_GOV_ARTERACTIVE
 	help
 	  'arteractive' - This driver adds the interactive governor
 	  from the SM-G900F source drop.
+
+config CPU_FREQ_GOV_ASSWAX
+           tristate "'asswax' cpufreq governor"
+           depends on CPU_FREQ
+           help
+             asswax' - a "smart" optimized governor!
+             If in doubt, say N.
 
 comment "CPU frequency scaling drivers"
 

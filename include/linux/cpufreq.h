@@ -584,6 +584,9 @@ extern struct cpufreq_governor cpufreq_gov_alucard;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_ARTERACTIVE)
 extern struct cpufreq_governor cpufreq_gov_arteractive;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_arteractive)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_ASSWAX)
+extern struct cpufreq_governor cpufreq_gov_asswax;
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_asswax)
 #endif
 
 /*********************************************************************
