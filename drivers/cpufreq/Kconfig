@@ -365,6 +365,12 @@ config CPU_FREQ_DEFAULT_GOV_HOTPLUG
 	  the help section of the driver. Fallback governor will be the
 	  performance governor.
 
+config CPU_FREQ_DEFAULT_GOV_HYBRID
+	bool "hybrid"
+	select CPU_FREQ_GOV_HYBRID
+	help
+	  Use the CPUFreq governor 'hybrid' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -766,6 +772,12 @@ config CPU_FREQ_GOV_HOTPLUG
 	  'ondemand' instead.
 
 	  If in doubt, say N.
+
+config CPU_FREQ_GOV_HYBRID
+	tristate "'hybrid' cpufreq policy governor"
+	select CPU_FREQ_TABLE
+	help
+	  Activate the compilation of the CPU governor 'hybrid'
 
 comment "CPU frequency scaling drivers"
 
