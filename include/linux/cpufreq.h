@@ -711,6 +711,9 @@ extern struct cpufreq_governor cpufreq_gov_pegasusq;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_POISON)
 extern struct cpufreq_governor cpufreq_gov_poison;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_poison)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_PRESERVATIVE)
+extern struct cpufreq_governor cpufreq_gov_preservative;
+#define CPUFREQ_DEFAULT_GOVERNOR        (&cpufreq_gov_preservative)
 #endif
 
 /*********************************************************************

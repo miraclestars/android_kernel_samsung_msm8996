@@ -508,6 +508,14 @@ config CPU_FREQ_DEFAULT_GOV_POISON
   	select CPU_FREQ_GOV_POISON
   	help
 
+config CPU_FREQ_DEFAULT_GOV_PRESERVATIVE
+	bool "preservative"
+	select CPU_FREQ_GOV_PRESERVATIVE
+	select CPU_FREQ_GOV_PERFORMANCE
+	help
+	  Use the CPUFreq governor 'preservative' as default. This allows
+	  you to eat jam.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -1126,6 +1134,14 @@ config CPU_FREQ_GOV_POISON
         depends on CPU_FREQ
         help
           'Poison' - a "power optimized" governor
+
+config CPU_FREQ_GOV_PRESERVATIVE
+	tristate "'preservative' cpufreq governor"
+	depends on CPU_FREQ
+	help
+	  'preservative' - this driver is good in cakes
+
+	  If in doubt, say N.
 
 comment "CPU frequency scaling drivers"
 
