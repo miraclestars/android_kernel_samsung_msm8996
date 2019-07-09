@@ -503,6 +503,11 @@ config CPU_FREQ_DEFAULT_GOV_PEGASUSQ
 	help
 	  Use the CPUFreq governor 'pegasusq' as default.
 
+config CPU_FREQ_DEFAULT_GOV_POISON
+  	bool "Poison"
+  	select CPU_FREQ_GOV_POISON
+  	help
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -1115,6 +1120,12 @@ config CPU_FREQ_GOV_ONDEMAND_X
 
 config CPU_FREQ_GOV_PEGASUSQ
 	tristate "'pegasusq' cpufreq policy governor"
+
+config CPU_FREQ_GOV_POISON
+        tristate "'Poison' cpufreq governor"
+        depends on CPU_FREQ
+        help
+          'Poison' - a "power optimized" governor
 
 comment "CPU frequency scaling drivers"
 
