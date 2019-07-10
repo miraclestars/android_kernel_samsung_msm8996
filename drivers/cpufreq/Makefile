@@ -62,6 +62,7 @@ obj-$(CONFIG_CPU_FREQ_GOV_PEGASUSQ)	+= cpufreq_pegasusq.o
 obj-$(CONFIG_CPU_FREQ_GOV_POISON)  	+= cpufreq_poison.o
 obj-$(CONFIG_CPU_FREQ_GOV_PRESERVATIVE) += cpufreq_preservative.o
 obj-$(CONFIG_CPU_FREQ_GOV_RELAXED)	+= cpufreq_relaxed.o
+obj-$(CONFIG_CPU_FREQ_GOV_SAVAGEDZEN)	+= cpufreq_savagedzen.o
 obj-$(CONFIG_CPU_FREQ_GOV_COMMON)		+= cpufreq_governor.o
 obj-$(CONFIG_CPU_BOOST)			+= cpu-boost.o
 
