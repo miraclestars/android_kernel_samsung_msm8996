@@ -575,6 +575,11 @@ config CPU_FREQ_DEFAULT_GOV_THUNDERSTORMS_INTERACTIVE
 	  loading your cpufreq low-level hardware driver, using the
 	  'thunderstorms_interactive' governor for latency-sensitive workloads.
 
+config CPU_FREQ_DEFAULT_GOV_THUNDERX
+        bool "thunderx"
+        select CPU_FREQ_GOV_THUNDERX
+        help
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -1269,6 +1274,12 @@ config CPU_FREQ_GOV_SMARTMAX
 config CPU_FREQ_GOV_THUNDERSTORMS_INTERACTIVE
 	tristate "'thunderstorms_interactive' cpufreq policy governor"
 	depends on CPU_FREQ
+
+config CPU_FREQ_GOV_THUNDERX
+  	tristate "'thunderx' cpufreq governor"
+  	depends on CPU_FREQ
+  	help
+          'thunderx' - a "power optimized" governor for Mediatek SoCs
 
 comment "CPU frequency scaling drivers"
 
