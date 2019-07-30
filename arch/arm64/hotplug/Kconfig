@@ -41,4 +41,11 @@ config BRICKED_HOTPLUG
 	  This enables kernel based multi core control.
 	  (up/down hotplug based on load)
 
+config CLUSTER_HOTPLUG
+	bool "Enable cluster-hotplug cpu hotplug driver"
+        depends on HOTPLUG_CPU
+	default n
+	help
+	  Generic Cluster-hotplug cpu hotplug driver for ARM SOCs big.little.
+
 endmenu
