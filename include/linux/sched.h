@@ -177,6 +177,10 @@ extern int nr_processes(void);
 extern unsigned long nr_running(void);
 extern bool single_task_running(void);
 extern unsigned long nr_iowait(void);
+#ifdef CONFIG_INTELLI_HOTPLUG
+extern unsigned long avg_nr_running(void);
+extern unsigned long avg_cpu_nr_running(unsigned int cpu);
+#endif
 extern unsigned long nr_iowait_cpu(int cpu);
 extern void get_iowait_load(unsigned long *nr_waiters, unsigned long *load);
 #ifdef CONFIG_CPU_QUIET

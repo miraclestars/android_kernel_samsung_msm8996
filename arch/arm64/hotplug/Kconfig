@@ -48,4 +48,12 @@ config CLUSTER_HOTPLUG
 	help
 	  Generic Cluster-hotplug cpu hotplug driver for ARM SOCs big.little.
 
+config INTELLI_HOTPLUG
+	bool "Intelli hotplug driver"
+	depends on HOTPLUG_CPU
+	default n
+	help
+	  An intelligent cpu hotplug driver for
+	  Low Latency Frequency Transition capable processors.
+
 endmenu
