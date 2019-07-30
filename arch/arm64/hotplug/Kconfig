@@ -11,4 +11,10 @@ config AIO_HOTPLUG
 	  an All in One HotPlug for Traditional Quad-Core SoCs and 
 	  Hexa/Octa-Core big.LITTLE SoCs.
 
+config ALUCARD_HOTPLUG
+	bool "Alucard hotplug"
+ 	default n
+ 	help
+ 	  Generic Alucard-hotplug cpu hotplug driver for ARM SOCs.
+
 endmenu
