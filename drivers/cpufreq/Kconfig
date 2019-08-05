@@ -309,6 +309,11 @@ config CPU_FREQ_DEFAULT_GOV_DARKNESS
 	help
 	  Use the CPUFreq governor 'Darkness' as default.
 
+config CPU_FREQ_DEFAULT_GOV_DARKNESSV5
+        bool "darknessv5"
+        select CPU_FREQ_GOV_DARKNESSV5
+	help
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -643,6 +648,10 @@ config CPU_FREQ_GOV_DARKNESS
 	tristate "'darkness' cpufreq governor"
 	depends on CPU_FREQ
 	select CPU_FREQ_GOV_COMMON
+
+config CPU_FREQ_GOV_DARKNESSV5
+	tristate "'darknessv5' cpufreq governor"
+	depends on CPU_FREQ
 
 comment "CPU frequency scaling drivers"
 
