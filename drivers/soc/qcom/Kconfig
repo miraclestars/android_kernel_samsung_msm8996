@@ -815,6 +815,16 @@ config QCOM_SMCINVOKE
 config STATE_NOTIFIER
         bool "State Notifier"
 
+config MSM_BG_GLINK
+	tristate "WCD DSP GLINK Driver"
+	depends on MSM_GLINK
+	default y if MSM_BGCOM=y
+	help
+	  This option enables driver which provides communication interface
+	  between MSM and BG over glink transport protocol. This driver
+	  provides read and write interface via char device.This driver is
+	  used by the audio codec driver to interface with BG.
+
 source "drivers/soc/qcom/memshare/Kconfig"
 
 config TIMA_RKP
