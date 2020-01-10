@@ -8540,12 +8540,12 @@ int q6asm_get_asm_topology(int session_id)
 		pr_err("%s: invalid session_id = %d\n", __func__, session_id);
 		goto done;
 	}
-	if (session[session_id] == NULL) {
+	if (session[session_id].ac == NULL) {
 		pr_err("%s: session not created for session id = %d\n",
 		       __func__, session_id);
 		goto done;
 	}
-	topology = session[session_id]->topology;
+	topology = (session[session_id].ac)->topology;
 done:
 	return topology;
 }
@@ -8558,12 +8558,12 @@ int q6asm_get_asm_app_type(int session_id)
 		pr_err("%s: invalid session_id = %d\n", __func__, session_id);
 		goto done;
 	}
-	if (session[session_id] == NULL) {
+	if (session[session_id].ac == NULL) {
 		pr_err("%s: session not created for session id = %d\n",
 		       __func__, session_id);
 		goto done;
 	}
-	app_type = session[session_id]->app_type;
+	app_type = (session[session_id].ac)->app_type;
 done:
 	return app_type;
 }
