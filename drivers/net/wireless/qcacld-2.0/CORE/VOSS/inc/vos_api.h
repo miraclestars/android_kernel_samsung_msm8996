@@ -405,6 +405,7 @@ v_U64_t vos_get_monotonic_boottime_ns(void);
 
 v_U64_t vos_get_bootbased_boottime_ns(void);
 
+bool vos_is_self_recovery_enabled(void);
 void vos_trigger_recovery(bool);
 
 #ifdef FEATURE_WLAN_D0WOW
@@ -441,6 +442,7 @@ void vos_pkt_stats_to_logger_thread(void *pl_hdr, void *pkt_dump, void *data);
 int vos_get_radio_index(void);
 int vos_set_radio_index(int radio_index);
 void vos_svc_fw_shutdown_ind(struct device *dev);
+void vos_svc_fw_crashed_ind(struct device *dev);
 uint64_t vos_do_div(uint64_t, uint32_t);
 /**
  * vos_do_div64() - Do uint64/64 divsion.
@@ -469,4 +471,12 @@ int qca_request_firmware(const struct firmware **firmware_p,
                 const char *name,
                 struct device *device);
 
+#ifdef WLAN_SMART_ANTENNA_FEATURE
+uint32_t vos_get_smart_ant_cfg(void);
+#else
+static inline uint32_t vos_get_smart_ant_cfg(void)
+{
+	return 0;
+}
+#endif
 #endif // if !defined __VOS_API_H

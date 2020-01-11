@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -594,6 +594,12 @@ static int tlshim_mgmt_rx_process(void *context, u_int8_t *data,
 		return 0;
 	}
 
+	if (hdr->buf_len > param_tlvs->num_bufp) {
+		TLSHIM_LOGE("Invalid length of frame hdr->buf_len:%u, param_tlvs->num_bufp:%u",
+			hdr->buf_len, param_tlvs->num_bufp);
+		return -EINVAL;
+	}
+
 	if (hdr->buf_len < sizeof(struct ieee80211_frame) ||
 	   (!saved_beacon && hdr->buf_len > data_len)) {
 		adf_os_spin_unlock_bh(&tl_shim->mgmt_lock);
@@ -850,6 +856,7 @@ static int tlshim_mgmt_rx_process(void *context, u_int8_t *data,
 					if (efrm - (uint8_t *)wh <
 					    sizeof(*wh) + vos_get_mmie_size()) {
 						TLSHIM_LOGE("Invalid frame length");
+						vos_pkt_return_packet(rx_pkt);
 						return 0;
 					}
 					key_id = (u_int16_t)*(efrm - vos_get_mmie_size() + 2);

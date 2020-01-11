@@ -1007,6 +1007,8 @@ typedef struct
      * by way of ignoring if using new host/old FW or old host/new FW since it is at the end of this struct
      */
     tSirMacAddr bssId;
+    uint8_t ssidHidden;
+    tSirMacSSid ssid;
 
     eHalStatus status;
 
@@ -1573,5 +1575,31 @@ struct hal_hpcs_pulse_params
 struct hal_primary_params {
 	uint8_t session_id;
 	tSirMacAddr bssid;
+};
+
+/**
+ * struct hal_gpio_cfg - GPIO config paramters
+ * @gpio_num: GPIO number to be setup
+ * @input: 0 - Output/ 1 - Input
+ * @pull_type: Pull type
+ * @intr_mode: Interrupt mode
+ * @mux_config_val: mux_config_val
+ */
+struct hal_gpio_cfg {
+	uint32_t gpio_num;
+	uint32_t input;
+	uint32_t pull_type;
+	uint32_t intr_mode;
+	uint32_t mux_config_val;
+};
+
+/**
+ * struct hal_gpio_output - GPIO output parameters
+ * @gpio_num: GPIO number to be setup
+ * @set:  Set the GPIO pin
+ */
+struct hal_gpio_output {
+	uint32_t gpio_num;
+	uint32_t set;
 };
 #endif /* _HALMSGAPI_H_ */

@@ -4224,7 +4224,7 @@ FG_BTC_BT_INTERVAL_PAGE_P2P_STA_DEFAULT
 /* GPIO pin to toogle when capture tsf */
 #define CFG_SET_TSF_GPIO_PIN_NAME                  "gtsf_gpio_pin"
 #define CFG_SET_TSF_GPIO_PIN_MIN                   (0)
-#define CFG_SET_TSF_GPIO_PIN_MAX                   (254)
+#define CFG_SET_TSF_GPIO_PIN_MAX                   (255)
 #define TSF_GPIO_PIN_INVALID                       (255)
 #define CFG_SET_TSF_GPIO_PIN_DEFAULT               (TSF_GPIO_PIN_INVALID)
 
@@ -5673,6 +5673,49 @@ FG_BTC_BT_INTERVAL_PAGE_P2P_STA_DEFAULT
 #define CFG_IS_PER_CHAIN_STATS_ENABLED_MIN     (0)
 #define CFG_IS_PER_CHAIN_STATS_ENABLED_MAX     (1)
 
+#ifdef WLAN_SMART_ANTENNA_FEATURE
+/*
+ * <ini>
+ * smart_antenna_cfg - Config parameters for smart antenna
+ * @Min: 0
+ * @Max: 0xFF
+ * @Default: 0
+ *
+ * This ini is used for smart antenna config. Subfields of the
+ * parameter looks like this:
+ *
+ * |31                 10|9           1|   0   |
+ * |---------------------+-------------+-------|
+ * |         rsvd        | debug level | Enable|
+ * |---------------------+-------------+-------|
+ * b'0: - enable/disable: 1 enable/ 0 disable
+ * b'1:9 - debug level. 0001: fatal error
+ *                      0010: error
+ *                      0100: debug
+ *                      1000: info
+ * Relate: None
+ *
+ * Supported Feature: Smart Antenna
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_SMART_ANTENNA_PARAM              "smart_antenna_cfg"
+#define CFG_SMART_ANTENNA_PARAM_DEFAULT      (0)
+#define CFG_SMART_ANTENNA_PARAM_MIN          (0)
+#define CFG_SMART_ANTENNA_PARAM_MAX          (0xFF)
+
+#define SMART_ANT_ENABLED                    1
+#else
+#define SMART_ANT_ENABLED                    0
+#endif
+
+#ifdef MULTI_IF_LOG
+#define CFG_HOST_LOG_CUSTOM_NETLINK_PROTO        "host_log_custom_nl_proto"
+#define CFG_HOST_LOG_CUSTOM_NETLINK_PROTO_DEFAULT (2)
+#define CFG_HOST_LOG_CUSTOM_NETLINK_PROTO_MIN     (0)
+#define CFG_HOST_LOG_CUSTOM_NETLINK_PROTO_MAX     (32)
+#endif
 /*---------------------------------------------------------------------------
   Type declarations
   -------------------------------------------------------------------------*/
@@ -6611,6 +6654,14 @@ struct hdd_config {
    bool is_sae_enabled;
 #endif
    bool per_chain_stats_enabled;
+
+#ifdef WLAN_SMART_ANTENNA_FEATURE
+    uint32_t smart_antenna_cfg;
+#endif
+
+#ifdef MULTI_IF_LOG
+   uint32_t host_log_custom_nl_proto;
+#endif
 };
 
 typedef struct hdd_config hdd_config_t;
