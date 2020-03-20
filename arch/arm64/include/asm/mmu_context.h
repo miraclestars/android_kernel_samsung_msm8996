@@ -61,18 +61,12 @@ static inline void contextidr_thread_switch(struct task_struct *next)
 static inline void cpu_set_reserved_ttbr0(void)
 {
 	unsigned long ttbr = page_to_phys(empty_zero_page);
-#ifndef CONFIG_TIMA_RKP
+
 	asm(
 	"	msr	ttbr0_el1, %0			// set TTBR0\n"
 	"	isb"
 	:
 	: "r" (ttbr));
-#else
-	rkp_call(RKP_EMULT_TTBR0, (unsigned long)ttbr, 0, 0, 0, 0);
-	asm(
-	"	isb"
-	::);
-#endif
 }
 
 static inline void switch_new_context(struct mm_struct *mm)

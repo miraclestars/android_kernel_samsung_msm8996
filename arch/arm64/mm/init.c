@@ -41,9 +41,6 @@
 #include <asm/sizes.h>
 #include <asm/tlb.h>
 #include <asm/alternative.h>
-#ifdef CONFIG_TIMA_RKP
-#include <linux/rkp_entry.h>
-#endif
 
 #include "mm.h"
 
@@ -354,9 +351,6 @@ void free_initmem(void)
 #endif
 	free_initmem_default(0);
 	free_alternatives_memory();
-#ifdef CONFIG_TIMA_RKP
-	rkp_call(RKP_DEF_INIT, 0, 0, 0, 0, 0);
-#endif
 }
 
 #ifdef CONFIG_BLK_DEV_INITRD

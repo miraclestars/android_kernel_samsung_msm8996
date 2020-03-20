@@ -14,9 +14,6 @@
  */
 
 #include <linux/linkage.h>
-#ifdef CONFIG_RKP_CFP_FIX_SMC_BUG
-#include <asm/rkp_cfp.h>
-#endif
 
 /* int __invoke_psci_fn_hvc(u64 function_id, u64 arg0, u64 arg1, u64 arg2) */
 ENTRY(__invoke_psci_fn_hvc)
@@ -26,10 +23,6 @@ ENDPROC(__invoke_psci_fn_hvc)
 
 /* int __invoke_psci_fn_smc(u64 function_id, u64 arg0, u64 arg1, u64 arg2) */
 ENTRY(__invoke_psci_fn_smc)
-#ifdef CONFIG_RKP_CFP_FIX_SMC_BUG
-	_smc	#0
-#else
 	smc	#0
-#endif
 	ret
 ENDPROC(__invoke_psci_fn_smc)

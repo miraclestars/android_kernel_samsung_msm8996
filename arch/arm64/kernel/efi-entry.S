@@ -105,17 +105,7 @@ ENTRY(efi_stub_entry)
 	mrs	x0, sctlr_el1
 	bic	x0, x0, #1 << 0	// clear SCTLR.M
 	bic	x0, x0, #1 << 2	// clear SCTLR.C
-#ifndef CONFIG_TIMA_RKP
 	msr	sctlr_el1, x0
-#else
-	mov     x1, x0
-	mov     x0, #0xc015                     /* smc id */
-	movk    x0, #0xc300, lsl #16
-back_efi_stub:
-	smc     #0x0
-	cmp     x0, #0x1
-	b.eq    back_efi_stub
-#endif
 	isb
 2:
 	/* Jump to kernel entry point */

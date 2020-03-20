@@ -44,8 +44,6 @@ arm64-obj-$(CONFIG_PCI)			+= pci.o
 arm64-obj-$(CONFIG_ARMV8_DEPRECATED)	+= armv8_deprecated.o
 arm64-obj-$(CONFIG_MSM_APP_API)		+= app_api.o
 arm64-obj-$(CONFIG_MSM_APP_SETTINGS)	+= app_setting.o
-arm64-obj-$(CONFIG_RKP_CFP_ROPP)	+= rkp_cfp.o
-arm64-obj-$(CONFIG_TIMA_RKP)            += rkp_entry.o
 
 obj-y					+= $(arm64-obj-y) vdso/
 obj-$(CONFIG_VDSO32)			+= vdso32/

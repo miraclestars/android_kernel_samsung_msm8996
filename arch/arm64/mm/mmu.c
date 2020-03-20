@@ -247,76 +247,6 @@ static void __init *early_alloc(unsigned long sz)
 	return ptr;
 }
 
-#ifdef CONFIG_TIMA_RKP
-spinlock_t ro_rkp_pages_lock = __SPIN_LOCK_UNLOCKED();
-char ro_pages_stat[RO_PAGES] = {0};
-unsigned ro_alloc_last = 0;
-int rkp_ro_mapped = 0;
-int ro_buf_done = 0;
-void* rkp_ro_alloc()
-{
-	unsigned long flags;
-	int i, j;
-	void * alloc_addr = NULL;
-	if (!ro_buf_done)
-		return alloc_addr;
-
-	spin_lock_irqsave(&ro_rkp_pages_lock,flags);
-        for (i = 0, j = ro_alloc_last; i < (RO_PAGES) ; i++) {
-		j =  (j+i) %(RO_PAGES);
-		if (!ro_pages_stat[j]) {
-			ro_pages_stat[j] = 1;
-			ro_alloc_last = j+1;
-			alloc_addr = (void*) ((u64)RKP_RBUF_VA +  (j << PAGE_SHIFT));
-			break;
-		}
-	}
-	spin_unlock_irqrestore(&ro_rkp_pages_lock,flags);
-	return alloc_addr;
-}
-
-void rkp_ro_free(void *free_addr)
-{
-	int i;
-	unsigned long flags;
-	i =  ((u64)free_addr - (u64)RKP_RBUF_VA) >> PAGE_SHIFT;
-	spin_lock_irqsave(&ro_rkp_pages_lock,flags);
-	ro_pages_stat[i] = 0;
-	ro_alloc_last = i;
-	spin_unlock_irqrestore(&ro_rkp_pages_lock,flags);
-}
-
-unsigned int is_rkp_ro_page(u64 addr)
-{
-	if( (addr >= (u64)RKP_RBUF_VA)
-		&& (addr < (u64)(RKP_RBUF_VA+ TIMA_ROBUF_SIZE)))
-		return 1;
-	else return 0;
-}
-
-/* we suppose the whole block remap to page table should start with block borders */
-static inline void __init block_to_pages(pmd_t *pmd, unsigned long addr,
-                                  unsigned long end, unsigned long pfn)
-{
-	pte_t *old_pte;
-	pmd_t new ;
-	pte_t *pte = NULL;
-	int i = 0;
-	pte = rkp_ro_alloc();
-	if (!pte)
-		pte = (pte_t *)early_alloc(PAGE_SIZE);
-	old_pte = pte;
-	__pmd_populate(&new, __pa(pte), PMD_TYPE_TABLE); /* populate to temporary pmd */
-	pte = pte_offset_kernel(&new, addr);
-	do {
-		set_pte(pte, pfn_pte(pfn, PAGE_KERNEL_EXEC));
-		pfn++;
-	} while (pte++, i++, i < PTRS_PER_PTE);
-	__pmd_populate(pmd, __pa(old_pte), PMD_TYPE_TABLE);
-	flush_tlb_all();
-}
-#endif
-
 /*
  * remap a PMD into pages
  */
@@ -341,11 +271,6 @@ static void alloc_init_pte(pmd_t *pmd, unsigned long addr,
 				  void *(*alloc)(unsigned long size))
 {
 	pte_t *pte;
-#ifdef CONFIG_TIMA_RKP
-	if(pmd_block(*pmd)) {
-		return block_to_pages(pmd, addr, end, pfn);
-	}
-#endif
 
 	if (pmd_none(*pmd) || pmd_bad(*pmd)) {
 		pte = alloc(PTRS_PER_PTE * sizeof(pte_t));
@@ -386,14 +311,7 @@ static void alloc_init_pmd(struct mm_struct *mm, pud_t *pud,
 	 * Check for initial section mappings in the pgd/pud and remove them.
 	 */
 	if (pud_none(*pud) || pud_bad(*pud)) {
-#ifdef CONFIG_TIMA_RKP
-	pmd = rkp_ro_alloc();
-	if (!pmd)
-		pmd = alloc(PTRS_PER_PMD * sizeof(pmd_t));
-#else   /* !CONFIG_TIMA_RKP */
 	pmd = alloc(PTRS_PER_PMD * sizeof(pmd_t));
-#endif
-
 		if (pud_sect(*pud)) {
 			/*
 			 * need to have the 1G of mappings continue to be
@@ -436,9 +354,6 @@ static inline bool use_1G_block(unsigned long addr, unsigned long next,
 	if (((addr | next | phys) & ~PUD_MASK) != 0)
 		return false;
 
-	if ((IS_ENABLED(CONFIG_TIMA_RKP)) && 
-		((addr <= (u64)_stext) && ((u64)_stext <= next)))
-			return false;
 	return true;
 }
 
@@ -480,12 +395,7 @@ static void alloc_init_pud(struct mm_struct *mm, pgd_t *pgd,
 			 */
 			if (!pud_none(old_pud)) {
 				phys_addr_t table = __pa(pmd_offset(&old_pud, 0));
-#ifdef CONFIG_TIMA_RKP
-			if ((u64) table < (u64) __pa(_text) || (u64) table > (u64) __pa(_etext))
 				memblock_free(table, PAGE_SIZE);
-#else
-				memblock_free(table, PAGE_SIZE);
-#endif
 				flush_tlb_all();
 			}
 		} else {
@@ -722,40 +632,9 @@ static void __init map_mem(void)
 			memblock_set_current_limit(limit);
 		}
 #endif
-#ifdef CONFIG_TIMA_RKP
-		/* mid should be selected such that start to mid includes the
-		 * entire RKP RO buffer so that it can be memset safely.
-		 * Memset should be done only once, obviously, hence the condition.
-		 */
-		if (((u64)start < TIMA_ROBUF_START) && ((u64)end > TIMA_ROBUF_START)) {
-			__map_memblock(start, end);
-			memset(RKP_RBUF_VA, 0, TIMA_ROBUF_SIZE);
-			ro_buf_done = 1;
-		} else {
-			__map_memblock(start, end);
-		}
-#else /* !CONFIG_TIMA_RKP */
 	__map_memblock(start, end);
-#endif
 	}
-#ifdef CONFIG_TIMA_RKP
-	if ((u64) _text & (~PMD_MASK)) {
-		phys_addr_t  start = (phys_addr_t) __pa(_text) & PMD_MASK;
-		phys_addr_t  end = (phys_addr_t) __pa(_text);
-		__map_memblock(start, end);
-		start = (phys_addr_t) __pa(_text);
-		end = (phys_addr_t) ALIGN(__pa(_text), PMD_SIZE);
-		__map_memblock(start, end);
-	}
-	if ((u64) _etext & (~PMD_MASK)) {
-		phys_addr_t  start = (phys_addr_t) __pa(_etext) & PMD_MASK;
-		phys_addr_t  end = (phys_addr_t) __pa(_etext);
-		__map_memblock(start, end);
-		start = (phys_addr_t) __pa(_etext);
-		end = (phys_addr_t) ALIGN(__pa(_etext), PMD_SIZE);
-		__map_memblock(start, end);
-	}
-#endif
+
 	/* Limit no longer required. */
 	memblock_set_current_limit(MEMBLOCK_ALLOC_ANYWHERE);
 }
@@ -892,13 +771,7 @@ void __init paging_init(void)
 	flush_tlb_all();
 
 	/* allocate the zero page. */
-#ifdef CONFIG_TIMA_RKP
-	zero_page = rkp_ro_alloc();
-	if (!zero_page)
-		zero_page = early_alloc(PAGE_SIZE);
-#else	/* !CONFIG_TIMA_RKP */
 	zero_page = early_alloc(PAGE_SIZE);
-#endif
 
 	bootmem_init();
 
@@ -1007,10 +880,6 @@ void vmemmap_free(unsigned long start, unsigned long end)
 }
 #endif	/* CONFIG_SPARSEMEM_VMEMMAP */
 
-#ifdef CONFIG_TIMA_RKP
-extern pte_t bm_pte[];
-extern pmd_t bm_pmd[];
-#else
 static pte_t bm_pte[PTRS_PER_PTE] __page_aligned_bss;
 #if CONFIG_PGTABLE_LEVELS > 2
 static pmd_t bm_pmd[PTRS_PER_PMD] __page_aligned_bss;
@@ -1018,7 +887,6 @@ static pmd_t bm_pmd[PTRS_PER_PMD] __page_aligned_bss;
 #if CONFIG_PGTABLE_LEVELS > 3
 static pud_t bm_pud[PTRS_PER_PUD] __page_aligned_bss;
 #endif
-#endif	/* CONFIG_TIMA_RKP */
 
 static inline pud_t * fixmap_pud(unsigned long addr)
 {

@@ -22,10 +22,6 @@
 
 #include <asm/opcodes.h>
 
-#ifdef CONFIG_TIMA_RKP
-#include <linux/rkp_entry.h>
-#endif
-
 #define SCTLR_EL1_CP15BEN	(0x1 << 5)
 #define SCTLR_EL1_SED		(0x1 << 8)
 
@@ -87,11 +83,7 @@ static inline void config_sctlr_el1(u32 clear, u32 set)
 	asm volatile("mrs %0, sctlr_el1" : "=r" (val));
 	val &= ~clear;
 	val |= set;
-#ifdef CONFIG_TIMA_RKP
-	rkp_call(RKP_EMULT_SCTLR, (unsigned long)val, 0, 0, 0, 0);
-#else
 	asm volatile("msr sctlr_el1, %0" : : "r" (val));
-#endif
 }
 #endif
 
