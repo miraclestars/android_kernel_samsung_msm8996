@@ -42,6 +42,8 @@
 #include "sirMacProtDef.h"
 #include "csrLinkList.h"
 
+#define CSR_NUM_WLM_LATENCY_LEVEL   4
+
 typedef enum
 {
     eCSR_AUTH_TYPE_NONE,    //never used
@@ -983,6 +985,7 @@ typedef struct tagCsrRoamProfile
 
     tCsrAuthList AuthType;
     eCsrAuthType negotiatedAuthType;
+    tCsrAuthList akm_list;
 
     tCsrEncryptionList EncryptionType;
     //This field is for output only, not for input
@@ -1091,6 +1094,7 @@ typedef struct tagCsrRoamConnectedProfile
     eCsrRoamBssType BSSType;
     eCsrAuthType AuthType;
     tCsrAuthList AuthInfo;
+    tCsrAuthList akm_list;
     eCsrEncryptionType EncryptionType;
     tCsrEncryptionList EncryptionInfo;
     eCsrEncryptionType mcEncryptionType;
@@ -1424,6 +1428,9 @@ typedef struct tagCsrConfigParam
     tANI_U32    sap_ch_switch_with_csa;
 #endif//#ifdef WLAN_FEATURE_SAP_TO_FOLLOW_STA_CHAN
     bool enable_bcast_probe_rsp;
+    uint16_t wlm_latency_enable;
+    uint16_t wlm_latency_level;
+    uint32_t wlm_latency_flags[CSR_NUM_WLM_LATENCY_LEVEL];
 }tCsrConfigParam;
 
 //Tush
@@ -1578,6 +1585,7 @@ typedef struct tagCsrRoamInfo
 #ifdef WLAN_FEATURE_SAE
     struct sir_sae_info *sae_info;
 #endif
+    struct sSirSmeAssocInd *owe_pending_assoc_ind;
 }tCsrRoamInfo;
 
 
@@ -1610,6 +1618,8 @@ typedef struct sSirSmeAssocIndToUpperLayerCnf
     tSirSmeChanInfo      chan_info;
     /* Extended capabilities of STA */
     uint8_t              ecsa_capable;
+    uint32_t             ies_len;
+    uint8_t              *ies;
     bool                 ampdu;
     bool                 sgi_enable;
     bool                 tx_stbc;

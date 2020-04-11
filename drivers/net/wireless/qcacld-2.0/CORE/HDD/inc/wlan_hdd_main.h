@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1349,6 +1349,10 @@ struct hdd_adapter_s
 #ifdef WLAN_FEATURE_TSF
 #define MAX_INVALD_TIME_NUM 4
    /* tsf value get from firmware */
+#ifndef CONFIG_NON_QC_PLATFORM
+   uint64_t cur_qtime;
+   uint64_t last_qtime;
+#endif
    uint64_t cur_target_time;
    uint64_t cur_host_time;
    uint64_t last_host_time;
@@ -1425,7 +1429,7 @@ struct hdd_adapter_s
     v_BOOL_t offloads_configured;
 
     /* DSCP to UP QoS Mapping */
-    sme_QosWmmUpType hddWmmDscpToUpMap[WLAN_HDD_MAX_DSCP+1];
+    sme_QosWmmUpType hddWmmDscpToUpMap[WLAN_MAX_DSCP+1];
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
    v_BOOL_t isLinkLayerStatsSet;
@@ -1474,6 +1478,10 @@ struct hdd_adapter_s
      */
     uint8_t restrict_offchannel_cnt;
 
+#ifdef AUDIO_MULTICAST_AGGR_SUPPORT
+    struct audio_multicast_aggr multicast_aggr;
+#endif
+    bool spectral_enabled;
 };
 
 #define WLAN_HDD_GET_STATION_CTX_PTR(pAdapter) (&(pAdapter)->sessionCtx.station)
@@ -1766,6 +1774,18 @@ typedef struct sap_ch_switch_with_csa_ctx
     struct mutex sap_ch_sw_lock; //Synchronize access to sap_chan_sw_pending
 }sap_ch_switch_ctx;
 #endif
+
+typedef struct hdd_spectral
+{
+	uint32_t mode;
+	struct
+	{
+		uint32_t count;
+		uint32_t fft_size;
+	}config;
+	struct dentry *debugfs_dir;
+	struct rchan *rfs_chan_spec_scan;
+}hdd_spectral_t;
 
 /** Adapter stucture definition */
 
@@ -2184,7 +2204,7 @@ struct hdd_context_s
 #endif
     adf_os_spinlock_t restrict_offchan_lock;
     bool  restrict_offchan_flag;
-
+    hdd_spectral_t *hdd_spec;
 };
 
 /*---------------------------------------------------------------------------
@@ -2716,7 +2736,30 @@ void hdd_set_driver_del_ack_enable(uint16_t session_id, hdd_context_t *hdd_ctx,
 }
 #endif
 
-
+/**
+ * hdd_send_update_owe_info_event - Send update OWE info event
+ * @adapter: Pointer to adapter
+ * @sta_addr: MAC address of peer STA
+ * @owe_ie: OWE IE
+ * @owe_ie_len: Length of OWE IE
+ *
+ * Send update OWE info event to hostapd
+ *
+ * Return: none
+ */
+#ifdef CFG80211_EXTERNAL_DH_UPDATE_SUPPORT
+void hdd_send_update_owe_info_event(hdd_adapter_t *adapter,
+				    uint8_t sta_addr[],
+				    uint8_t *owe_ie,
+				    uint32_t owe_ie_len);
+#else
+static inline void hdd_send_update_owe_info_event(hdd_adapter_t *adapter,
+						  uint8_t sta_addr[],
+						  uint8_t *owe_ie,
+						  uint32_t owe_ie_len)
+{
+}
+#endif
 
 int hdd_reassoc(hdd_adapter_t *pAdapter, const tANI_U8 *bssid,
 		const tANI_U8 channel, const handoff_src src);

@@ -55,6 +55,7 @@
 #include "vos_cnss.h"
 #include "limSession.h"
 #include "limScanResultUtils.h"
+#include "wma.h"
 #ifdef CLD_REGDB
 #include "regdb.h"
 #include <net/regulatory.h>
@@ -69,7 +70,18 @@
 #define IEEE80211_CHAN_NO_IBSS IEEE80211_CHAN_NO_IR
 #endif
 
-static v_REGDOMAIN_t temp_reg_domain = REGDOMAIN_COUNT;
+static v_REGDOMAIN_t reg_domain = REGDOMAIN_COUNT;
+
+static void reg_domain_update(v_REGDOMAIN_t temp_reg_domain)
+{
+	reg_domain = temp_reg_domain;
+}
+
+static v_REGDOMAIN_t reg_domain_get(void)
+{
+	return reg_domain;
+}
+
 /* true if init happens thru init time driver hint */
 static v_BOOL_t init_by_driver = VOS_FALSE;
 /* true if init happens thru init time  callback from regulatory core.
@@ -81,7 +93,7 @@ static v_BOOL_t init_by_reg_core = VOS_FALSE;
  * Preprocessor Definitions and Constants
  * -------------------------------------------------------------------------*/
 #define MAX_COUNTRY_COUNT        300
-#define REG_WAIT_TIME            50
+#define REG_WAIT_TIME            120
 /*
  * This is a set of common rules used by our world regulatory domains.
  * We have 12 world regulatory domains. To save space we consolidate
@@ -288,161 +300,6 @@ chan_to_ht_40_index_map chan_to_ht_40_index[NUM_20MHZ_RF_CHANNELS] =
   {RF_CHAN_BOND_155, RF_CHAN_BOND_159},    //RF_CHAN_157,
   {RF_CHAN_BOND_159, RF_CHAN_BOND_163},    //RF_CHAN_161,
   {RF_CHAN_BOND_163, INVALID_RF_CHANNEL},  //RF_CHAN_165,
-};
-
-// cache of country info table;
-// this is re-initialized from data on binary file
-// loaded on driver initialization if available
-
-
-static CountryInfoTable_t countryInfoTable =
-{
-    /* the first entry in the table is always the world domain */
-    142,
-    {
-      {REGDOMAIN_WORLD, {'0', '0'}}, // WORLD DOMAIN
-      {REGDOMAIN_FCC, {'A', 'D'}}, // ANDORRA
-      {REGDOMAIN_ETSI, {'A', 'E'}}, //UAE
-      {REGDOMAIN_ETSI, {'A', 'L'}}, //ALBANIA
-      {REGDOMAIN_ETSI, {'A', 'M'}}, //ARMENIA
-      {REGDOMAIN_ETSI, {'A', 'N'}}, //NETHERLANDS ANTILLES
-      {REGDOMAIN_FCC, {'A', 'R'}}, //ARGENTINA
-      {REGDOMAIN_FCC, {'A', 'S'}}, //AMERICAN SOMOA
-      {REGDOMAIN_ETSI, {'A', 'T'}}, //AUSTRIA
-      {REGDOMAIN_FCC, {'A', 'U'}}, //AUSTRALIA
-      {REGDOMAIN_ETSI , {'A', 'W'}}, //ARUBA
-      {REGDOMAIN_ETSI,  {'A', 'Z'}}, //AZERBAIJAN
-      {REGDOMAIN_ETSI, {'B', 'A'}}, //BOSNIA AND HERZEGOVINA
-      {REGDOMAIN_FCC, {'B', 'B'}}, //BARBADOS
-      {REGDOMAIN_ETSI, {'B', 'D'}}, //BANGLADESH
-      {REGDOMAIN_ETSI, { 'B', 'E'}}, //BELGIUM
-      {REGDOMAIN_ETSI, {'B', 'G'}}, //BULGARIA
-      {REGDOMAIN_ETSI, {'B', 'H'}}, //BAHRAIN
-      {REGDOMAIN_ETSI, {'B', 'L'}}, //
-      {REGDOMAIN_FCC, {'B', 'M'}}, //BERMUDA
-      {REGDOMAIN_ETSI, {'B', 'N'}}, //BRUNEI DARUSSALAM
-      {REGDOMAIN_ETSI, {'B', 'O'}}, //BOLIVIA
-      {REGDOMAIN_ETSI, {'B', 'R'}}, //BRAZIL
-      {REGDOMAIN_FCC, {'B', 'S'}}, //BAHAMAS
-      {REGDOMAIN_ETSI, {'B', 'Y'}}, //BELARUS
-      {REGDOMAIN_ETSI, {'B', 'Z'}}, //BELIZE
-      {REGDOMAIN_FCC, {'C', 'A'}}, //CANADA
-      {REGDOMAIN_ETSI, {'C', 'H'}}, //SWITZERLAND
-      {REGDOMAIN_ETSI, {'C', 'L'}}, //CHILE
-      {REGDOMAIN_FCC, {'C', 'N'}}, //CHINA
-      {REGDOMAIN_FCC, {'C', 'O'}}, //COLOMBIA
-      {REGDOMAIN_ETSI, {'C', 'R'}}, //COSTA RICA
-      {REGDOMAIN_ETSI, {'C', 'S'}},
-      {REGDOMAIN_ETSI, {'C', 'Y'}}, //CYPRUS
-      {REGDOMAIN_ETSI, {'C', 'Z'}}, //CZECH REPUBLIC
-      {REGDOMAIN_ETSI, {'D', 'E'}}, //GERMANY
-      {REGDOMAIN_ETSI, {'D', 'K'}}, //DENMARK
-      {REGDOMAIN_FCC, {'D', 'M'}}, //DOMINICA
-      {REGDOMAIN_FCC, {'D', 'O'}}, //DOMINICAN REPUBLIC
-      {REGDOMAIN_ETSI, {'D', 'Z'}}, //ALGERIA
-      {REGDOMAIN_ETSI, {'E', 'C'}}, //ECUADOR
-      {REGDOMAIN_ETSI, {'E', 'E'}}, //ESTONIA
-      {REGDOMAIN_ETSI, {'E', 'G'}}, //EGYPT
-      {REGDOMAIN_ETSI, {'E', 'S'}}, //SPAIN
-      {REGDOMAIN_ETSI, {'F', 'I'}}, //FINLAND
-      {REGDOMAIN_ETSI, {'F', 'R'}}, //FRANCE
-      {REGDOMAIN_ETSI, {'G', 'B'}}, //UNITED KINGDOM
-      {REGDOMAIN_FCC, {'G', 'D'}},  //GRENADA
-      {REGDOMAIN_ETSI, {'G', 'E'}}, //GEORGIA
-      {REGDOMAIN_ETSI, {'G', 'F'}}, //FRENCH GUIANA
-      {REGDOMAIN_ETSI, {'G', 'L'}}, //GREENLAND
-      {REGDOMAIN_ETSI, {'G', 'P'}}, //GUADELOUPE
-      {REGDOMAIN_ETSI, {'G', 'R'}}, //GREECE
-      {REGDOMAIN_FCC, {'G', 'T'}},  //GUATEMALA
-      {REGDOMAIN_FCC, {'G', 'U'}},  //GUAM
-      {REGDOMAIN_ETSI, {'H', 'U'}}, //HUNGARY
-      {REGDOMAIN_ETSI, {'I', 'D'}},  //INDONESIA
-      {REGDOMAIN_ETSI, {'I', 'E'}}, //IRELAND
-      {REGDOMAIN_ETSI, {'I', 'L'}}, //ISRAEL
-      {REGDOMAIN_ETSI, {'I', 'N'}}, //INDIA
-      {REGDOMAIN_ETSI, {'I', 'R'}}, //IRAN, ISLAMIC REPUBLIC OF
-      {REGDOMAIN_ETSI, {'I', 'S'}}, //ICELNAD
-      {REGDOMAIN_ETSI, {'I', 'T'}}, //ITALY
-      {REGDOMAIN_FCC, {'J', 'M'}},  //JAMAICA
-      {REGDOMAIN_JAPAN, {'J', 'P'}}, //JAPAN
-      {REGDOMAIN_ETSI, {'J', 'O'}}, //JORDAN
-      {REGDOMAIN_ETSI, {'K', 'E'}}, //KENYA
-      {REGDOMAIN_ETSI, {'K', 'H'}}, //CAMBODIA
-      {REGDOMAIN_ETSI, {'K', 'P'}}, //KOREA, DEMOCRATIC PEOPLE's REPUBLIC OF
-      {REGDOMAIN_ETSI, {'K', 'R'}}, //KOREA, REPUBLIC OF
-      {REGDOMAIN_ETSI, {'K', 'W'}}, //KUWAIT
-      {REGDOMAIN_ETSI, {'K', 'Z'}}, //KAZAKHSTAN
-      {REGDOMAIN_ETSI, {'L', 'B'}}, //LEBANON
-      {REGDOMAIN_ETSI, {'L', 'I'}}, //LIECHTENSTEIN
-      {REGDOMAIN_ETSI, {'L', 'K'}}, //SRI-LANKA
-      {REGDOMAIN_ETSI, {'L', 'T'}}, //LITHUANIA
-      {REGDOMAIN_ETSI, {'L', 'U'}}, //LUXEMBOURG
-      {REGDOMAIN_ETSI, {'L','V'}},  //LATVIA
-      {REGDOMAIN_ETSI, {'M', 'A'}}, //MOROCCO
-      {REGDOMAIN_ETSI, {'M', 'C'}}, //MONACO
-      {REGDOMAIN_ETSI, {'M', 'K'}}, //MACEDONIA, THE FORMER YUGOSLAV REPUBLIC OF
-      {REGDOMAIN_ETSI, {'M', 'M'}}, //MYANMAR
-      {REGDOMAIN_FCC, {'M','N'}}, //MONGOLIA
-      {REGDOMAIN_FCC, {'M', 'O'}}, //MACAO
-      {REGDOMAIN_FCC, {'M', 'P'}}, //NORTHERN MARIANA ISLANDS
-      {REGDOMAIN_ETSI, {'M', 'Q'}}, //MARTINIQUE
-      {REGDOMAIN_FCC, {'M', 'T'}}, //MALTA
-      {REGDOMAIN_ETSI, {'M', 'U'}}, //MAURITIUS
-      {REGDOMAIN_ETSI, {'M', 'W'}}, //MALAWI
-      {REGDOMAIN_FCC, {'M', 'X'}}, //MEXICO
-      {REGDOMAIN_ETSI, {'M', 'Y'}}, //MALAYSIA
-      {REGDOMAIN_ETSI, {'N', 'A'}}, //NAMIBIA
-      {REGDOMAIN_ETSI, {'N', 'G'}}, //NIGERIA
-      {REGDOMAIN_FCC, {'N', 'I'}}, //NICARAGUA
-      {REGDOMAIN_ETSI, {'N', 'L'}}, //NETHERLANDS
-      {REGDOMAIN_ETSI, {'N', 'O'}}, //NORWAY
-      {REGDOMAIN_ETSI, {'N', 'P'}}, //NEPAL
-      {REGDOMAIN_FCC, {'N', 'Z'}}, //NEW-ZEALAND
-      {REGDOMAIN_FCC, {'O', 'M'}}, //OMAN
-      {REGDOMAIN_FCC, {'P', 'A'}}, //PANAMA
-      {REGDOMAIN_ETSI, {'P', 'E'}}, //PERU
-      {REGDOMAIN_ETSI, {'P', 'F'}}, //FRENCH POLYNESIA
-      {REGDOMAIN_ETSI, {'P', 'G'}}, //PAPUA NEW GUINEA
-      {REGDOMAIN_FCC, {'P', 'H'}}, //PHILIPPINES
-      {REGDOMAIN_ETSI, {'P', 'K'}}, //PAKISTAN
-      {REGDOMAIN_ETSI, {'P', 'L'}}, //POLAND
-      {REGDOMAIN_FCC, {'P', 'R'}}, //PUERTO RICO
-      {REGDOMAIN_FCC, {'P', 'S'}}, //PALESTINIAN TERRITORY, OCCUPIED
-      {REGDOMAIN_ETSI, {'P', 'T'}}, //PORTUGAL
-      {REGDOMAIN_FCC, {'P', 'Y'}}, //PARAGUAY
-      {REGDOMAIN_ETSI, {'Q', 'A'}}, //QATAR
-      {REGDOMAIN_ETSI, {'R', 'E'}}, //REUNION
-      {REGDOMAIN_ETSI, {'R', 'O'}}, //ROMAINIA
-      {REGDOMAIN_ETSI, {'R', 'S'}}, //SERBIA
-      {REGDOMAIN_ETSI, {'R', 'U'}}, //RUSSIA
-      {REGDOMAIN_FCC, {'R', 'W'}}, //RWANDA
-      {REGDOMAIN_ETSI, {'S', 'A'}}, //SAUDI ARABIA
-      {REGDOMAIN_ETSI, {'S', 'E'}}, //SWEDEN
-      {REGDOMAIN_ETSI, {'S', 'G'}}, //SINGAPORE
-      {REGDOMAIN_ETSI, {'S', 'I'}}, //SLOVENNIA
-      {REGDOMAIN_ETSI, {'S', 'K'}}, //SLOVAKIA
-      {REGDOMAIN_ETSI, {'S', 'V'}}, //EL SALVADOR
-      {REGDOMAIN_ETSI, {'S', 'Y'}}, //SYRIAN ARAB REPUBLIC
-      {REGDOMAIN_ETSI, {'T', 'H'}}, //THAILAND
-      {REGDOMAIN_ETSI, {'T', 'N'}}, //TUNISIA
-      {REGDOMAIN_ETSI, {'T', 'R'}}, //TURKEY
-      {REGDOMAIN_ETSI, {'T', 'T'}}, //TRINIDAD AND TOBAGO
-      {REGDOMAIN_FCC, {'T', 'W'}}, //TAIWAN, PRIVINCE OF CHINA
-      {REGDOMAIN_ETSI, {'T', 'Z'}}, //TANZANIA, UNITED REPUBLIC OF
-      {REGDOMAIN_ETSI, {'U', 'A'}}, //UKRAINE
-      {REGDOMAIN_ETSI, {'U', 'G'}}, //UGANDA
-      {REGDOMAIN_FCC, {'U', 'S'}}, //USA
-      {REGDOMAIN_ETSI, {'U', 'Y'}}, //URUGUAY
-      {REGDOMAIN_ETSI, {'U', 'Z'}}, //UZBEKISTAN
-      {REGDOMAIN_ETSI, {'V', 'E'}}, //VENEZUELA
-      {REGDOMAIN_FCC, {'V', 'I'}}, //VIRGIN ISLANDS, US
-      {REGDOMAIN_ETSI, {'V', 'N'}}, //VIETNAM
-      {REGDOMAIN_ETSI, {'Y', 'E'}}, //YEMEN
-      {REGDOMAIN_ETSI, {'Y', 'T'}}, //MAYOTTE
-      {REGDOMAIN_ETSI, {'Z', 'A'}}, //SOUTH AFRICA
-      {REGDOMAIN_ETSI, {'Z', 'W'}}, //ZIMBABWE
-      {REGDOMAIN_JAPAN, {'X', 'A'}}, //JAPAN PASSIVE
-    }
 };
 
 /*
@@ -1183,15 +1040,15 @@ VOS_STATUS vos_nv_getSupportedCountryCode( v_BYTE_t *pBuffer, v_SIZE_t *pBufferS
    v_SIZE_t providedBufferSize = *pBufferSize;
    int i;
    // pBufferSize now points to the required buffer size
-   *pBufferSize = countryInfoTable.countryCount * (VOS_COUNTRY_CODE_LEN + paddingSize );
+   *pBufferSize = ol_regdmn_Rdt.allCountriesCt * (VOS_COUNTRY_CODE_LEN + paddingSize );
    if ( NULL == pBuffer || providedBufferSize < *pBufferSize )
    {
       VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_INFO,
             ("Insufficient memory for country code list"));
       return VOS_STATUS_E_NOMEM;
    }
-   for (i = 0; i < countryInfoTable.countryCount; i++) {
-      vos_mem_copy(pBuffer, countryInfoTable.countryInfo[i].countryCode,
+   for (i = 0; i < ol_regdmn_Rdt.allCountriesCt; i++) {
+      vos_mem_copy(pBuffer, ol_regdmn_Rdt.allCountries[i].isoName,
                    VOS_COUNTRY_CODE_LEN);
       pBuffer += (VOS_COUNTRY_CODE_LEN + paddingSize );
    }
@@ -1279,7 +1136,7 @@ VOS_STATUS vos_nv_getChannelListWithPower(tChannelListWithPower *channels20MHz /
 
 v_REGDOMAIN_t vos_nv_getDefaultRegDomain( void )
 {
-    return countryInfoTable.countryInfo[0].regDomain;
+    return REGDOMAIN_WORLD;
 }
 
 /**------------------------------------------------------------------------
@@ -1585,11 +1442,11 @@ VOS_STATUS vos_nv_getRegDomainFromCountryCode( v_REGDOMAIN_t *pRegDomain,
     v_CONTEXT_t pVosContext = NULL;
     hdd_context_t *pHddCtx = NULL;
     struct wiphy *wiphy = NULL;
-    int i;
     int wait_result;
 #ifdef CLD_REGDB
     struct regulatory_request request;
 #endif
+    v_REGDOMAIN_t temp_reg_domain;
 
     /* sanity checks */
     if (NULL == pRegDomain)
@@ -1607,14 +1464,6 @@ VOS_STATUS vos_nv_getRegDomainFromCountryCode( v_REGDOMAIN_t *pRegDomain,
                    ("Country code array is NULL"));
         return VOS_STATUS_E_FAULT;
     }
-
-    if (0 == countryInfoTable.countryCount)
-    {
-        VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
-                   ("Reg domain table is empty") );
-        return VOS_STATUS_E_EMPTY;
-    }
-
 
     pVosContext = vos_get_global_context(VOS_MODULE_ID_SYS, NULL);
 
@@ -1640,7 +1489,7 @@ VOS_STATUS vos_nv_getRegDomainFromCountryCode( v_REGDOMAIN_t *pRegDomain,
     if (pHddCtx->isLogpInProgress) {
         VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
                    (" SSR in progress, return") );
-        *pRegDomain = temp_reg_domain;
+        *pRegDomain = reg_domain_get();
          return VOS_STATUS_SUCCESS;
     }
 
@@ -1652,20 +1501,8 @@ VOS_STATUS vos_nv_getRegDomainFromCountryCode( v_REGDOMAIN_t *pRegDomain,
         return VOS_STATUS_E_FAULT;
     }
 
-    temp_reg_domain = REGDOMAIN_COUNT;
     /* lookup the country in the local database */
-    for (i = 0; i < countryInfoTable.countryCount &&
-             REGDOMAIN_COUNT == temp_reg_domain; i++)
-    {
-        if (memcmp(country_code, countryInfoTable.countryInfo[i].countryCode,
-                   VOS_COUNTRY_CODE_LEN) == 0)
-        {
-            /* country code is found */
-            /* record the temporary regulatory_domain as well */
-            temp_reg_domain = countryInfoTable.countryInfo[i].regDomain;
-            break;
-        }
-    }
+    regdmn_map_country_to_vos_regdmn(country_code, &temp_reg_domain);
 
     if (REGDOMAIN_COUNT == temp_reg_domain) {
 
@@ -1680,9 +1517,10 @@ VOS_STATUS vos_nv_getRegDomainFromCountryCode( v_REGDOMAIN_t *pRegDomain,
         temp_reg_domain = REGDOMAIN_WORLD;
     }
 
+    reg_domain_update(temp_reg_domain);
     if (COUNTRY_QUERY == source) {
         *pRegDomain = temp_reg_domain;
-         return VOS_STATUS_SUCCESS;
+        return VOS_STATUS_SUCCESS;
     }
 
     VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_INFO,
@@ -1729,7 +1567,6 @@ VOS_STATUS vos_nv_getRegDomainFromCountryCode( v_REGDOMAIN_t *pRegDomain,
            VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_INFO,
                        "runtime country code : %c%c is found in kernel db",
                         country_code[0], country_code[1]);
-           *pRegDomain = temp_reg_domain;
         }
         else
         {
@@ -1742,7 +1579,7 @@ VOS_STATUS vos_nv_getRegDomainFromCountryCode( v_REGDOMAIN_t *pRegDomain,
         }
     }
 
-    *pRegDomain = temp_reg_domain;
+    *pRegDomain = reg_domain_get();
     return VOS_STATUS_SUCCESS;
 }
 
@@ -1789,12 +1626,17 @@ bool vos_is_dsrc_channel(uint16_t center_freq)
 {
     switch (center_freq) {
     case 5852:
+    case 5855:
     case 5860:
+    case 5865:
     case 5870:
     case 5880:
+    case 5885:
     case 5890:
+    case 5895:
     case 5900:
     case 5910:
+    case 5915:
     case 5920:
     case 5875:
     case 5905:
@@ -2064,7 +1906,8 @@ freq_reg_info_regd(struct wiphy *wiphy, u32 center_freq,
 #endif
 
 /* create_linux_regulatory_entry to populate internal structures from wiphy */
-static int create_linux_regulatory_entry(struct wiphy *wiphy,
+static int create_linux_regulatory_entry(v_REGDOMAIN_t temp_reg_domain,
+                                         struct wiphy *wiphy,
                                          v_U8_t nBandCapability,
                                          bool reset)
 {
@@ -2387,7 +2230,7 @@ static int create_linux_regulatory_entry(struct wiphy *wiphy,
 
             }
             /* Copy wiphy flags in nv table */
-            if (n != -1)
+            if (n != INVALID_RF_CHANNEL)
                 pnvEFSTable->halnv.tables.regDomains[temp_reg_domain].
                     channels[n].flags = wiphy->bands[i]->channels[j].flags;
             pnvEFSTable->halnv.tables.regDomains[temp_reg_domain].
@@ -2496,10 +2339,10 @@ int __wlan_hdd_linux_reg_notifier(struct wiphy *wiphy,
     hdd_context_t *pHddCtx = wiphy_priv(wiphy);
     eCsrBand nBandCapability = eCSR_BAND_ALL;
     v_COUNTRYCODE_t country_code;
-    int i;
     v_BOOL_t isVHT80Allowed;
     bool reset = false;
     VOS_TIMER_STATE timer_status;
+    v_REGDOMAIN_t temp_reg_domain;
 
     VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_INFO,
               FL("country: %c%c, initiator %d, dfs_region: %d"),
@@ -2625,19 +2468,7 @@ int __wlan_hdd_linux_reg_notifier(struct wiphy *wiphy,
 
         vos_update_reg_info(pHddCtx);
 
-        temp_reg_domain = REGDOMAIN_COUNT;
-        for (i = 0; i < countryInfoTable.countryCount &&
-                 REGDOMAIN_COUNT == temp_reg_domain; i++)
-        {
-            if (memcmp(country_code, countryInfoTable.countryInfo[i].countryCode,
-                       VOS_COUNTRY_CODE_LEN) == 0)
-            {
-                /* country code is found */
-                /* record the temporary regulatory_domain as well */
-                temp_reg_domain = countryInfoTable.countryInfo[i].regDomain;
-                break;
-            }
-        }
+        regdmn_map_country_to_vos_regdmn(country_code, &temp_reg_domain);
 
         if (REGDOMAIN_COUNT == temp_reg_domain)
             temp_reg_domain = REGDOMAIN_WORLD;
@@ -2645,7 +2476,8 @@ int __wlan_hdd_linux_reg_notifier(struct wiphy *wiphy,
         isVHT80Allowed = pHddCtx->isVHT80Allowed;
         regChannels =
             pnvEFSTable->halnv.tables.regDomains[temp_reg_domain].channels;
-        if (create_linux_regulatory_entry(wiphy,
+        if (create_linux_regulatory_entry(temp_reg_domain,
+                                          wiphy,
                                           nBandCapability,
                                           reset) == 0)
         {
@@ -2667,6 +2499,7 @@ int __wlan_hdd_linux_reg_notifier(struct wiphy *wiphy,
             sme_GenericChangeCountryCode(pHddCtx->hHal, country_code,
                                          temp_reg_domain);
         }
+        reg_domain_update(temp_reg_domain);
 
         if (pHddCtx->cfg_ini->sta_change_cc_via_beacon) {
             /* Due the firmware process, host side need to send
@@ -2739,6 +2572,7 @@ VOS_STATUS vos_init_wiphy_from_eeprom(void)
    v_CONTEXT_t pVosContext = NULL;
    hdd_context_t *pHddCtx = NULL;
    struct wiphy *wiphy = NULL;
+   v_REGDOMAIN_t temp_reg_domain;
 
    pVosContext = vos_get_global_context(VOS_MODULE_ID_SYS, NULL);
 
@@ -2764,13 +2598,15 @@ VOS_STATUS vos_init_wiphy_from_eeprom(void)
 
    if (is_world_regd(pHddCtx->reg.reg_domain)) {
       temp_reg_domain = REGDOMAIN_WORLD;
-      if (create_linux_regulatory_entry(wiphy,
+      if (create_linux_regulatory_entry(temp_reg_domain,
+                                        wiphy,
                                         pHddCtx->cfg_ini->nBandCapability,
                                         true) != 0) {
          VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
                ("Error while creating regulatory entry"));
          return VOS_STATUS_E_FAULT;
       }
+      reg_domain_update(temp_reg_domain);
    }
 
    init_completion(&pHddCtx->reg_init);

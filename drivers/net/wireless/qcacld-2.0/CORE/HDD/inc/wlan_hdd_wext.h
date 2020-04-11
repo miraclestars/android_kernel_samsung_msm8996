@@ -473,15 +473,43 @@ void* wlan_hdd_change_country_code_callback(void *pAdapter);
 VOS_STATUS  wlan_hdd_set_powersave(hdd_adapter_t *pAdapter, int mode);
 
 /**
+ * enum tdcc_cmd_type - type of TDCC commmand to process
+ * @PS_TDCC_SET: command to set TDCC parameters
+ * @PS_TDCC_GET: command to get TDCC parameters
+ * @PS_TDCC_RESET: command to reset TDCC parameters to initial value
+ */
+enum tdcc_cmd_type {
+	PS_TDCC_SET,
+	PS_TDCC_GET,
+	PS_TDCC_RESET,
+};
+
+/**
  * wlan_hdd_process_tdcc_ps() - To process set_ps_tdcc command
  * @adapter: adapter handle
+ * @cmd: tdcc command to be processed
  * @enable: 1 enable, 0 disable
  * @percentage: percentage of tx duty cycle control
  *
  * Return: 0 if success, otherwise error code
  */
-int
-wlan_hdd_process_tdcc_ps(hdd_adapter_t *adapter, int enable, int percentage);
+int wlan_hdd_process_tdcc_ps(hdd_adapter_t *adapter,
+			     enum tdcc_cmd_type cmd,
+			     int *enable, int *percentage);
+
+/**
+ * hdd_wlan_get_ps_tdcc_info() - get tdcc info and print to buffer
+ * @adapter: adapter handle
+ * @length: the whole output string length
+ * @buffer: input buffer
+ * @buf_len: input buffer length
+ *
+ * Return: 0 if success, otherwise error code
+ */
+int hdd_wlan_get_ps_tdcc_info(hdd_adapter_t *adapter,
+			      uint16_t *length,
+			      char *buffer,
+			      uint16_t buf_len);
 
 int hdd_setBand(struct net_device *dev, u8 ui_band);
 int hdd_setBand_helper(struct net_device *dev, const char *command);
@@ -495,4 +523,10 @@ int process_wma_set_command_twoargs(int sessid, int paramid,
 void hdd_GetTemperatureCB(int temperature, void *cookie);
 VOS_STATUS wlan_hdd_get_temperature(hdd_adapter_t *adapter_ptr,
         union iwreq_data *wrqu, char *extra);
+#ifdef AUDIO_MULTICAST_AGGR_SUPPORT
+int wlan_hdd_set_multicast_retry_limit(hdd_adapter_t *adapter,
+			int group_id,int retry_limit);
+int wlan_hdd_multicast_aggr_enable(hdd_adapter_t *adapter,
+						int aggr_enable, int tbd_enable);
+#endif
 #endif // __WEXT_IW_H__

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -738,6 +738,9 @@ typedef struct tagCsrConfig
     bool vendor_vht_for_24ghz_sap;
     struct csr_sta_roam_policy_params sta_roam_policy;
     bool enable_bcast_probe_rsp;
+    uint16_t wlm_latency_enable;
+    uint16_t wlm_latency_level;
+    uint32_t wlm_latency_flags[CSR_NUM_WLM_LATENCY_LEVEL];
 }tCsrConfig;
 
 typedef struct tagCsrChannelPowerInfo
@@ -1613,6 +1616,15 @@ bool csr_store_joinreq_param(tpAniSirGlobal mac_ctx,
                              uint32_t session_id);
 bool csr_clear_joinreq_param(tpAniSirGlobal mac_ctx,
                              tANI_U32 session_id);
+/**
+ * csr_update_owe_info() - Update OWE info
+ * @mac: mac context
+ * @assoc_ind: assoc ind
+ *
+ * Return: eHalStatus
+ */
+eHalStatus csr_update_owe_info(tpAniSirGlobal mac,
+			       struct sSirSmeAssocInd *assoc_ind);
 eHalStatus csr_issue_stored_joinreq(tpAniSirGlobal mac_ctx,
                                     uint32_t *roam_id,
                                     uint32_t session_id);

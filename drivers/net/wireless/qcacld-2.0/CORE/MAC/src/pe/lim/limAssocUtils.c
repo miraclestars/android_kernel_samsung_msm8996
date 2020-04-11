@@ -417,7 +417,7 @@ limCheckRxRSNIeMatch(tpAniSirGlobal pMac, tDot11fIERSN rxRSNIe,tpPESession pSess
                      tANI_U8 staIsHT, tANI_BOOLEAN *pmfConnection)
 {
     tDot11fIERSN    *pRSNIe;
-    tANI_U8         i, j, match, onlyNonHtCipher = 1;
+    tANI_U8         i, j, match = 0, onlyNonHtCipher = 1;
 #ifdef WLAN_FEATURE_11W
     tANI_BOOLEAN weArePMFCapable;
     tANI_BOOLEAN weRequirePMF;
@@ -429,6 +429,25 @@ limCheckRxRSNIeMatch(tpAniSirGlobal pMac, tDot11fIERSN rxRSNIe,tpPESession pSess
     //RSN IE should be received from PE
     pRSNIe = &pSessionEntry->gStartBssRSNIe;
 
+    /* We should have only one AKM in assoc/reassoc request */
+    if (rxRSNIe.akm_suite_cnt != 1) {
+        limLog(pMac, LOG3, FL("Invalid RX akm_suite_cnt %d"),
+               rxRSNIe.akm_suite_cnt);
+        return eSIR_MAC_INVALID_AKMP_STATUS;
+    }
+    /* Check if we support the received AKM */
+    for (i = 0; i < pRSNIe->akm_suite_cnt; i++) {
+        if (vos_mem_compare(&rxRSNIe.akm_suite[0],
+                            &pRSNIe->akm_suite[i],
+                            sizeof(pRSNIe->akm_suite[i]))) {
+            match = 1;
+            break;
+        }
+    }
+    if (!match) {
+        limLog(pMac, LOG3, FL("Invalid RX akm_suite"));
+        return eSIR_MAC_INVALID_AKMP_STATUS;
+    }
     // Check groupwise cipher suite
     for (i = 0; i < sizeof(rxRSNIe.gp_cipher_suite); i++)
     {
@@ -539,10 +558,30 @@ tANI_U8
 limCheckRxWPAIeMatch(tpAniSirGlobal pMac, tDot11fIEWPA rxWPAIe,tpPESession pSessionEntry, tANI_U8 staIsHT)
 {
     tDot11fIEWPA    *pWPAIe;
-    tANI_U8         i, j, match, onlyNonHtCipher = 1;
+    tANI_U8         i, j, match = 0, onlyNonHtCipher = 1;
 
     // WPA IE should be received from PE
     pWPAIe = &pSessionEntry->gStartBssWPAIe;
+
+    /* We should have only one AKM in assoc/reassoc request */
+    if (rxWPAIe.auth_suite_count != 1) {
+        limLog(pMac, LOG1, FL("Invalid RX auth_suite_count %d"),
+               rxWPAIe.auth_suite_count);
+        return eSIR_MAC_INVALID_AKMP_STATUS;
+    }
+    /* Check if we support the received AKM */
+    for (i = 0; i < pWPAIe->auth_suite_count; i++) {
+        if (vos_mem_compare(&rxWPAIe.auth_suites[0],
+                            &pWPAIe->auth_suites[i],
+                            sizeof(pWPAIe->auth_suites[i]))) {
+            match = 1;
+            break;
+        }
+    }
+    if (!match) {
+        limLog(pMac, LOG1, FL("Invalid RX auth_suites"));
+        return eSIR_MAC_INVALID_AKMP_STATUS;
+    }
 
     // Check groupwise cipher suite
     for (i = 0; i < 4; i++)
@@ -2281,14 +2320,16 @@ limPopulateMatchingRateSet(tpAniSirGlobal pMac,
 #ifdef WLAN_SMART_ANTENNA_FEATURE
 /**
  * lim_sa_assoc_ind() - Indicate node connection to SA module
+ * @channel: current operation channel
  * @stads: Node description
  */
-void lim_sa_assoc_ind(tpDphHashNode stads)
+void lim_sa_assoc_ind(uint8_t channel, tpDphHashNode stads)
 {
 	uint32_t i, rate_num;
 	tpSirSupportedRates rate_cap;
 	struct sa_node_info node_info;
 
+	node_info.channel_num = channel;
 	vos_mem_copy(node_info.mac_addr, stads->staAddr, sizeof(stads->staAddr));
 	rate_cap = &stads->supportedRates;
 	rate_num = 0;
@@ -2318,7 +2359,7 @@ void lim_sa_assoc_ind(tpDphHashNode stads)
 	node_info.rate_cap.ratecount[RATE_INDEX_MCS] = rate_num;
 
 	/* 20M bandwidth is the default mode */
-	node_info.node_caps |= SMART_ANT_BW_20MHZ;
+	node_info.node_caps = SMART_ANT_BW_20MHZ;
 
 	if (stads->htSupportedChannelWidthSet)
 		node_info.node_caps |= SMART_ANT_NODE_HT | SMART_ANT_BW_40MHZ;
@@ -2347,7 +2388,7 @@ void lim_sa_disassoc_ind(tpDphHashNode stads)
 	smart_antenna_node_disconnected(stads->staAddr);
 }
 #else
-static inline void lim_sa_assoc_ind(tpDphHashNode stads)
+static inline void lim_sa_assoc_ind(uint8_t channel, tpDphHashNode stads)
 {
 }
 
@@ -2812,7 +2853,7 @@ limAddSta(
         vos_mem_free(pAddStaParams);
     }
 
-    lim_sa_assoc_ind(pStaDs);
+    lim_sa_assoc_ind(psessionEntry->currentOperChannel, pStaDs);
   return retCode;
 }
 

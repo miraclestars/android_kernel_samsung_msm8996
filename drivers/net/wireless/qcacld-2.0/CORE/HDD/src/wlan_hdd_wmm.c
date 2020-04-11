@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, 2019, 2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -82,9 +82,6 @@
 #define WMM_TRACE_LEVEL_INFO_HIGH  VOS_TRACE_LEVEL_INFO_HIGH
 #define WMM_TRACE_LEVEL_INFO_LOW   VOS_TRACE_LEVEL_INFO_LOW
 #endif
-
-
-#define WLAN_HDD_MAX_DSCP 0x3f
 
 // DHCP Port number
 #define DHCP_SOURCE_PORT 0x4400
@@ -1516,7 +1513,7 @@ VOS_STATUS hdd_wmm_init ( hdd_adapter_t *pAdapter )
     * DSCP to User Priority Lookup Table
     * By default use the 3 Precedence bits of DSCP as the User Priority
     */
-   for (dscp = 0; dscp <= WLAN_HDD_MAX_DSCP; dscp++) {
+   for (dscp = 0; dscp <= WLAN_MAX_DSCP; dscp++) {
       hddWmmDscpToUpMap[dscp] = dscp >> 3;
    }
 
@@ -1837,14 +1834,20 @@ hdd_wmm_classify_pkt(hdd_adapter_t* pAdapter, struct sk_buff *skb,
 
   @return         : Qdisc queue index
   ===========================================================================*/
-v_U16_t hdd_hostapd_select_queue(struct net_device * dev, struct sk_buff *skb
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0))
-                                 , void *accel_priv
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
+uint16_t hdd_hostapd_select_queue(struct net_device * dev, struct sk_buff *skb,
+				  struct net_device *sb_dev,
+				  select_queue_fallback_t fallback)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
+uint16_t hdd_hostapd_select_queue(struct net_device * dev, struct sk_buff *skb,
+				  void *accel_priv,
+				  select_queue_fallback_t fallback)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0))
+uint16_t hdd_hostapd_select_queue(struct net_device * dev, struct sk_buff *skb,
+				  void *accel_priv)
+#else
+uint16_t hdd_hostapd_select_queue(struct net_device * dev, struct sk_buff *skb)
 #endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
-                                 , select_queue_fallback_t fallback
-#endif
-)
 {
    WLANTL_ACEnumType ac;
    sme_QosWmmUpType up = SME_QOS_WMM_UP_BE;

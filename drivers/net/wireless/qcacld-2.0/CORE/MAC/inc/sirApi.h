@@ -1350,6 +1350,7 @@ typedef struct sSirSmeAssocInd
     tANI_U8              uniSig;  // DPU signature for unicast packets
     tANI_U8              bcastSig; // DPU signature for broadcast packets
     tAniAuthType         authType;
+    enum ani_akm_type    akm_type;
     tAniSSID             ssId; // SSID used by STA to associate
     tSirWAPIie           wapiIE;//WAPI IE received from peer
     tSirRSNie            rsnIE;// RSN IE received from peer
@@ -1384,9 +1385,21 @@ typedef struct sSirSmeAssocInd
     uint8_t              max_mcs_idx;
     uint8_t              rx_mcs_map;
     uint8_t              tx_mcs_map;
+    bool                 is_sae_authenticated;
+    const uint8_t *      owe_ie;
+    uint32_t             owe_ie_len;
+    uint16_t             owe_status;
 } tSirSmeAssocInd, *tpSirSmeAssocInd;
 
-
+/**
+ * struct owe_assoc_ind - owe association indication
+ * @node : List entry element
+ * @assoc_ind: pointer to assoc ind
+ */
+struct owe_assoc_ind {
+	vos_list_node_t node;
+	struct sSirSmeAssocInd *assoc_ind;
+};
 /// Definition for Association confirm
 /// ---> MAC
 typedef struct sSirSmeAssocCnf
@@ -1399,6 +1412,9 @@ typedef struct sSirSmeAssocCnf
     tANI_U16             aid;
     tSirMacAddr          alternateBssId;
     tANI_U8              alternateChannelId;
+    tSirMacStatusCodes   mac_status_code;
+    uint8_t *            owe_ie;
+    uint32_t             owe_ie_len;
 } tSirSmeAssocCnf, *tpSirSmeAssocCnf;
 
 /// Definition for Reassociation indication from peer
@@ -3722,6 +3738,17 @@ typedef struct sSirSmeCoexInd
     tANI_U32        coexIndData[SIR_COEX_IND_DATA_SIZE];
 }tSirSmeCoexInd, *tpSirSmeCoexInd;
 
+/**
+ * enum rxmgmt_flags - flags for received management frame.
+ * @RXMGMT_FLAG_NONE: Default value to indicate no flags are set.
+ * @RXMGMT_FLAG_EXTERNAL_AUTH: frame can be used for external authentication
+ *                             by upper layers.
+ */
+enum rxmgmt_flags {
+	RXMGMT_FLAG_NONE,
+	RXMGMT_FLAG_EXTERNAL_AUTH = 1 << 1,
+};
+
 typedef struct sSirSmeMgmtFrameInd
 {
     uint16_t        frame_len;
@@ -3729,6 +3756,7 @@ typedef struct sSirSmeMgmtFrameInd
     tANI_U8        sessionId;
     tANI_U8         frameType;
     tANI_S8         rxRssi;
+    enum rxmgmt_flags rx_flags;
     tANI_U8  frameBuf[1]; //variable
 }tSirSmeMgmtFrameInd, *tpSirSmeMgmtFrameInd;
 
@@ -4744,6 +4772,44 @@ typedef struct sSirScanOffloadReq {
       struct vendor_oui voui;
       ------------------------*/
 } tSirScanOffloadReq, *tpSirScanOffloadReq;
+
+/**
+ * struct wlm_latency_level_param - WLM parameters
+ * @wlm_latency_level: wlm latency level to set
+ *  0 - normal, 1 - moderate, 2 - low, 3 - ultralow
+ * @wlm_latency_flags: wlm latency flags to set
+ *  |31  12|  11  |  10  |9    8|7    6|5    4|3    2|  1  |  0  |
+ *  +------+------+------+------+------+------+------+-----+-----+
+ *  | RSVD | SSLP | CSLP | RSVD | Roam | RSVD | DWLT | DFS | SUP |
+ *  +------+-------------+-------------+-------------------------+
+ *  |  WAL |      PS     |     Roam    |         Scan            |
+ *
+ *  bit 0: Avoid scan request from HLOS if setting
+ *  bit 1: Skip DFS channel SCAN if setting
+ *  bit 2-3: Define policy of dwell time/duration for each foreign channel
+ *     (b2 b3)
+ *     (0  0 ): Default scan dwell time
+ *     (0  1 ): Reserve
+ *     (1  0 ): Shrink off channel dwell time
+ *     (1  1 ): Reserve
+ *  bit 4-5: Reserve for scan
+ *  bit 6-7: Define roaming policy
+ *     (b6 b7)
+ *     (0  0 ): Default roaming behavior, allow roaming in all scenarios
+ *     (0  1 ): Disallow all roaming
+ *     (1  0 ): Allow roaming when final bmissed
+ *     (1  1 ): Reserve
+ *  bit 8-9: Reserve for roaming
+ *  bit 10: Disable css power collapse if setting
+ *  bit 11: Disable sys sleep if setting
+ *  bit 12-31: Reserve for future useage
+ * @vdev_id: vdev id
+ */
+struct wlm_latency_level_param {
+	uint16_t wlm_latency_level;
+	uint32_t wlm_latency_flags;
+	uint16_t vdev_id;
+};
 
 /**
  * sir_scan_event_type - scan event types used in LIM
@@ -8726,11 +8792,42 @@ struct sir_sae_info {
  * @length: message length
  * @session_id: SME session id
  * @sae_status: SAE status, 0: Success, Non-zero: Failure.
+ * @peer_mac_addr: peer MAC address
  */
 struct sir_sae_msg {
 	uint16_t message_type;
 	uint16_t length;
 	uint16_t session_id;
 	uint8_t sae_status;
+	tSirMacAddr peer_mac_addr;
 };
+
+typedef struct sir_spectral_enable_params {
+	uint32_t vdev_id;
+	uint32_t trigger_cmd;
+	uint32_t enable_cmd;
+} sir_spectral_enable_params_t;
+
+typedef struct sir_spectral_config_params {
+	uint32_t vdev_id;
+	uint32_t spectral_scan_count;
+	uint32_t spectral_scan_period;
+	uint32_t spectral_scan_priority;
+	uint32_t spectral_scan_fft_size;
+	uint32_t spectral_scan_gc_ena;
+	uint32_t spectral_scan_restart_ena;
+	uint32_t spectral_scan_noise_floor_ref;
+	uint32_t spectral_scan_init_delay;
+	uint32_t spectral_scan_nb_tone_thr;
+	uint32_t spectral_scan_str_bin_thr;
+	uint32_t spectral_scan_wb_rpt_mode;
+	uint32_t spectral_scan_rssi_rpt_mode;
+	uint32_t spectral_scan_rssi_thr;
+	uint32_t spectral_scan_pwr_format;
+	uint32_t spectral_scan_rpt_mode;
+	uint32_t spectral_scan_bin_scale;
+	uint32_t spectral_scan_dbm_adj;
+	uint32_t spectral_scan_chn_mask;
+} sir_spectral_config_params_t;
+
 #endif /* __SIR_API_H */

@@ -896,7 +896,7 @@ static void wlan_hdd_deinit_power_stats_debugfs(hdd_context_t *hdd_ctx)
 #endif
 
 #ifdef DEBUG_HL_LOGGING
-vos_lock_t txqueue_stats_lock = {0};
+vos_lock_t *txqueue_stats_lock_ptr = NULL;
 static ssize_t __wlan_hdd_write_txqueue_stats_debugfs(struct file *file,
 						      const char __user *buf,
 						      size_t count,
@@ -909,6 +909,11 @@ static ssize_t __wlan_hdd_write_txqueue_stats_debugfs(struct file *file,
 							 NULL);
 	struct ol_txrx_pdev_t *pdev = vos_get_context(VOS_MODULE_ID_TXRX,
 							 vos_context);
+	if (!pdev) {
+		hddLog(VOS_TRACE_LEVEL_ERROR, FL("Failed to find pdev"));
+		return -ENODEV;
+	}
+
 	if (count > 2) {
 		hddLog(VOS_TRACE_LEVEL_ERROR, FL("error input data len %zu"),
 		       count);
@@ -945,13 +950,13 @@ static ssize_t wlan_hdd_write_txqueue_stats_debugfs(struct file *file,
 {
 	int ret = 0;
 
-	vos_lock_acquire(&txqueue_stats_lock);
+	vos_lock_acquire(txqueue_stats_lock_ptr);
 	vos_ssr_protect(__func__);
 
 	ret = __wlan_hdd_write_txqueue_stats_debugfs(file, buf, count, ppos);
 
 	vos_ssr_unprotect(__func__);
-	vos_lock_release(&txqueue_stats_lock);
+	vos_lock_release(txqueue_stats_lock_ptr);
 
 	return ret;
 }
@@ -970,6 +975,10 @@ static ssize_t __wlan_hdd_read_txqueue_stats_debugfs(struct file *file,
 							 NULL);
 	struct ol_txrx_pdev_t *pdev = vos_get_context(VOS_MODULE_ID_TXRX,
 							 vos_context);
+	if (!pdev) {
+		hddLog(VOS_TRACE_LEVEL_ERROR, FL("Failed to find pdev"));
+		return -ENODEV;
+	}
 
 	if (*pos != 0)
 		return 0;
@@ -1026,13 +1035,13 @@ static ssize_t wlan_hdd_read_txqueue_stats_debugfs(struct file *file,
 {
 	int ret;
 
-	vos_lock_acquire(&txqueue_stats_lock);
+	vos_lock_acquire(txqueue_stats_lock_ptr);
 	vos_ssr_protect(__func__);
 
 	ret = __wlan_hdd_read_txqueue_stats_debugfs(file, buf, count, pos);
 
 	vos_ssr_unprotect(__func__);
-	vos_lock_release(&txqueue_stats_lock);
+	vos_lock_release(txqueue_stats_lock_ptr);
 
 	return ret;
 }
@@ -1054,16 +1063,29 @@ static VOS_STATUS wlan_hdd_init_txqueue_stats_debugfs(hdd_adapter_t *adapter,
 					&fops_txqueue_stats_debugs))
 		return VOS_STATUS_E_FAILURE;
 
-	if (!VOS_IS_STATUS_SUCCESS(vos_lock_init(&txqueue_stats_lock)))
+	txqueue_stats_lock_ptr = vos_mem_malloc(sizeof(vos_lock_t));
+
+	if (NULL == txqueue_stats_lock_ptr) {
+		hddLog(VOS_TRACE_LEVEL_ERROR,
+		       FL("no mem for txqueue_stats_lock init"));
+		return VOS_STATUS_E_FAILURE;
+	}
+
+	vos_mem_set(txqueue_stats_lock_ptr, sizeof(vos_lock_t), 0);
+
+	if (!VOS_IS_STATUS_SUCCESS(vos_lock_init(txqueue_stats_lock_ptr))) {
+		vos_mem_free(txqueue_stats_lock_ptr);
 		hddLog(VOS_TRACE_LEVEL_ERROR,
 		       FL("txqueue_stats_lock init failed"));
+	}
 
 	return VOS_STATUS_SUCCESS;
 }
 
 static VOS_STATUS wlan_hdd_deinit_txqueue_stats_debugfs(void)
 {
-	vos_lock_destroy(&txqueue_stats_lock);
+	vos_mem_free(txqueue_stats_lock_ptr);
+	vos_lock_destroy(txqueue_stats_lock_ptr);
 	return VOS_STATUS_SUCCESS;
 }
 #else

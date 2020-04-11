@@ -1608,6 +1608,55 @@ typedef enum
 
 /*
  * <ini>
+ * gMaskForTxLegacyRate - mask legacy rate
+ * @Min: 0
+ * @Max: 0xFFFF
+ * @Default: 0
+ *
+ * This ini is used to mask legacy data rate
+ * for tx data.
+ *
+ * Usage: External
+ *
+ * 1:mask 0:unmask
+ * bits 0-3:  maskbit for CCK rate(1,2,5.5,11)
+ * bits 4-7:  Reserved
+ * bits 8-15:  maskbit for 11A rate(6,9,12,18,24,36,48,54)
+ * bits 16-31:  Reserved
+ *
+ * </ini>
+ */
+#define CFG_MASK_FOR_TX_LEGACY_RATE                 "gMaskForTxLegacyRate"
+#define CFG_MASK_FOR_TX_LEGACY_RATE_MIN             (WNI_CFG_MASK_LEGACY_RATE_STAMIN)
+#define CFG_MASK_FOR_TX_LEGACY_RATE_MAX             (WNI_CFG_MASK_LEGACY_RATE_STAMAX)
+#define CFG_MASK_FOR_TX_LEGACY_RATE_DEFAULT         (WNI_CFG_MASK_LEGACY_RATE_STADEF)
+
+/*
+ * <ini>
+ * gMaskForTxHtRate - mask HT rate
+ * @Min: 0
+ * @Max: 0xFFFF
+ * @Default: 0
+ *
+ * This ini is used to mask HT data rate
+ * for tx data.
+ *
+ * Usage: External
+ *
+ * 1:mask 0:unmask
+ * bits 0-7:  maskbit for MCS0~MCS7 for nss1
+ * bits 8-15:  maskbit for MCS0~MCS7 for nss2
+ * bits 16-31:  Reserved
+ *
+ * </ini>
+ */
+#define CFG_MASK_FOR_TX_HT_RATE                 "gMaskForTxHtRate"
+#define CFG_MASK_FOR_TX_HT_RATE_MIN             (WNI_CFG_MASK_HT_RATE_STAMIN)
+#define CFG_MASK_FOR_TX_HT_RATE_MAX             (WNI_CFG_MASK_HT_RATE_STAMAX)
+#define CFG_MASK_FOR_TX_HT_RATE_DEFAULT         (WNI_CFG_MASK_HT_RATE_STADEF)
+
+/*
+ * <ini>
  * gSapGetPeerInfo - Enable/Disable remote peer info query support
  * @Min: 0 - Disable remote peer info query support
  * @Max: 1 - Enable remote peer info query support
@@ -2867,6 +2916,11 @@ typedef enum
 #define CFG_ENABLE_SNR_MONITORING_MAX               ( 1 )
 #define CFG_ENABLE_SNR_MONITORING_DEFAULT           ( 0 )
 
+#define CFG_ENABLE_FAST_CH_SWITCH_CALI_NAME              "gEnableFastChSwitchCali"
+#define CFG_ENABLE_FAST_CH_SWITCH_CALI_DISABLE              (0)
+#define CFG_ENABLE_FAST_CH_SWITCH_CALI_ENABLE               (1)
+#define CFG_ENABLE_FAST_CH_SWITCH_CALI_DEFAULT           (0)
+
 #ifdef FEATURE_WLAN_SCAN_PNO
 #define CFG_PNO_SCAN_SUPPORT                         "gPNOScanSupport"
 #define CFG_PNO_SCAN_SUPPORT_ENABLE                  ( 1 )
@@ -3187,6 +3241,208 @@ This feature requires the dependent cfg.ini "gRoamPrefer5GHz" set to 1 */
 #define CFG_IBSS_PS_1RX_CHAIN_IN_ATIM_WINDOW_MAX     (1)
 #define CFG_IBSS_PS_1RX_CHAIN_IN_ATIM_WINDOW_DEFAULT (0)
 
+/*
+ * <ini>
+ * wlm_latency_enable - WLM latency Enable
+ *
+ * @min: 0
+ * @max: 1
+ * @default: 1
+ *
+ * 0 - disable
+ * 1 - enable
+ *
+ * </ini>
+ */
+#define CFG_LATENCY_ENABLE_NAME    "wlm_latency_enable"
+#define CFG_LATENCY_ENABLE_MIN     (0)
+#define CFG_LATENCY_ENABLE_MAX     (1)
+#define CFG_LATENCY_ENABLE_DEFAULT (1)
+
+/*
+ * <ini>
+ * wlm_latency_level - WLM latency level
+ * Define 4 latency level to gain latency
+ *
+ * @min: 0
+ * @max: 3
+ * @defalut: 0
+ *
+ * 0 - normal
+ * 1 - moderate
+ * 2 - low
+ * 3 - ultralow
+ *
+ * </ini>
+ */
+#define CFG_LATENCY_LEVEL_NAME    "wlm_latency_level"
+#define CFG_LATENCY_LEVEL_MIN     (0)
+#define CFG_LATENCY_LEVEL_MAX     (3)
+#define CFG_LATENCY_LEVEL_DEFAULT (0)
+
+/*
+ * <ini>
+ * wlm_latency_flags_normal - WLM flags setting for normal level
+ *
+ * @min: 0x0
+ * @max: 0xffffffff
+ * @defalut: 0x0
+ *
+ * |31  12|  11  |  10  |9    8|7    6|5    4|3    2|  1  |  0  |
+ * +------+------+------+------+------+------+------+-----+-----+
+ * | RSVD | SSLP | CSLP | RSVD | Roam | RSVD | DWLT | DFS | SUP |
+ * +------+-------------+-------------+-------------------------+
+ * |  WAL |      PS     |     Roam    |         Scan            |
+ *
+ * bit 0: Avoid scan request from HLOS if setting
+ * bit 1: Skip DFS channel SCAN if setting
+ * bit 2-3: Define policy of dwell time/duration for each foreign channel
+ *     (b2 b3)
+ *     (0  0 ): Default scan dwell time
+ *     (0  1 ): Reserve
+ *     (1  0 ): Shrink off channel dwell time
+ *     (1  1 ): Reserve
+ * bit 4-5: Reserve for scan
+ * bit 6-7: Define roaming policy
+ *     (b6 b7)
+ *     (0  0 ): Default roaming behavior, allow roaming in all scenarios
+ *     (0  1 ): Disallow all roaming
+ *     (1  0 ): Allow roaming when final bmissed
+ *     (1  1 ): Reserve
+ * bit 8-9: Reserve for roaming
+ * bit 10: Disable css power collapse if setting
+ * bit 11: Disable sys sleep if setting
+ * bit 12-31: Reserve for future useage
+ *
+ * </ini>
+ */
+#define CFG_LATENCY_FLAGS_NORMAL_NAME    "wlm_latency_flags_normal"
+#define CFG_LATENCY_FLAGS_NORMAL_MIN     (0x0)
+#define CFG_LATENCY_FLAGS_NORMAL_MAX     (0xffffffff)
+#define CFG_LATENCY_FLAGS_NORMAL_DEFAULT (0x0)
+
+/*
+ * <ini>
+ * wlm_latency_flags_moderate - WLM flags setting for moderate level
+ *
+ * @min: 0x0
+ * @max: 0xffffffff
+ * @defalut: 0x8
+ *
+ * |31  12|  11  |  10  |9    8|7    6|5    4|3    2|  1  |  0  |
+ * +------+------+------+------+------+------+------+-----+-----+
+ * | RSVD | SSLP | CSLP | RSVD | Roam | RSVD | DWLT | DFS | SUP |
+ * +------+-------------+-------------+-------------------------+
+ * |  WAL |      PS     |     Roam    |         Scan            |
+ *
+ * bit 0: Avoid scan request from HLOS if setting
+ * bit 1: Skip DFS channel SCAN if setting
+ * bit 2-3: Define policy of dwell time/duration for each foreign channel
+ *     (b2 b3)
+ *     (0  0 ): Default scan dwell time
+ *     (0  1 ): Reserve
+ *     (1  0 ): Shrink off channel dwell time
+ *     (1  1 ): Reserve
+ * bit 4-5: Reserve for scan
+ * bit 6-7: Define roaming policy
+ *     (b6 b7)
+ *     (0  0 ): Default roaming behavior, allow roaming in all scenarios
+ *     (0  1 ): Disallow all roaming
+ *     (1  0 ): Allow roaming when final bmissed
+ *     (1  1 ): Reserve
+ * bit 8-9: Reserve for roaming
+ * bit 10: Disable css power collapse if setting
+ * bit 11: Disable sys sleep if setting
+ * bit 12-31: Reserve for future useage
+ *
+ * </ini>
+ */
+#define CFG_LATENCY_FLAGS_MODERATE_NAME    "wlm_latency_flags_moderate"
+#define CFG_LATENCY_FLAGS_MODERATE_MIN     (0x0)
+#define CFG_LATENCY_FLAGS_MODERATE_MAX     (0xffffffff)
+#define CFG_LATENCY_FLAGS_MODERATE_DEFAULT (0x8)
+
+/*
+ * <ini>
+ * wlm_latency_flags_low - WLM flags setting for low level
+ *
+ * @min: 0x0
+ * @max: 0xffffffff
+ * @defalut: 0xa
+ *
+ * |31  12|  11  |  10  |9    8|7    6|5    4|3    2|  1  |  0  |
+ * +------+------+------+------+------+------+------+-----+-----+
+ * | RSVD | SSLP | CSLP | RSVD | Roam | RSVD | DWLT | DFS | SUP |
+ * +------+-------------+-------------+-------------------------+
+ * |  WAL |      PS     |     Roam    |         Scan            |
+ *
+ * bit 0: Avoid scan request from HLOS if setting
+ * bit 1: Skip DFS channel SCAN if setting
+ * bit 2-3: Define policy of dwell time/duration for each foreign channel
+ *     (b2 b3)
+ *     (0  0 ): Default scan dwell time
+ *     (0  1 ): Reserve
+ *     (1  0 ): Shrink off channel dwell time
+ *     (1  1 ): Reserve
+ * bit 4-5: Reserve for scan
+ * bit 6-7: Define roaming policy
+ *     (b6 b7)
+ *     (0  0 ): Default roaming behavior, allow roaming in all scenarios
+ *     (0  1 ): Disallow all roaming
+ *     (1  0 ): Allow roaming when final bmissed
+ *     (1  1 ): Reserve
+ * bit 8-9: Reserve for roaming
+ * bit 10: Disable css power collapse if setting
+ * bit 11: Disable sys sleep if setting
+ * bit 12-31: Reserve for future useage
+ *
+ * </ini>
+ */
+#define CFG_LATENCY_FLAGS_LOW_NAME    "wlm_latency_flags_low"
+#define CFG_LATENCY_FLAGS_LOW_MIN     (0x0)
+#define CFG_LATENCY_FLAGS_LOW_MAX     (0xffffffff)
+#define CFG_LATENCY_FLAGS_LOW_DEFAULT (0xa)
+
+/*
+ * <ini>
+ * wlm_latency_flags_ultralow - WLM flags setting for ultralow level
+ *
+ * @min: 0x0
+ * @max: 0xffffffff
+ * @defalut: 0xc83
+ *
+ * |31  12|  11  |  10  |9    8|7    6|5    4|3    2|  1  |  0  |
+ * +------+------+------+------+------+------+------+-----+-----+
+ * | RSVD | SSLP | CSLP | RSVD | Roam | RSVD | DWLT | DFS | SUP |
+ * +------+-------------+-------------+-------------------------+
+ * |  WAL |      PS     |     Roam    |         Scan            |
+ *
+ * bit 0: Avoid scan request from HLOS if setting
+ * bit 1: Skip DFS channel SCAN if setting
+ * bit 2-3: Define policy of dwell time/duration for each foreign channel
+ *     (b2 b3)
+ *     (0  0 ): Default scan dwell time
+ *     (0  1 ): Reserve
+ *     (1  0 ): Shrink off channel dwell time
+ *     (1  1 ): Reserve
+ * bit 4-5: Reserve for scan
+ * bit 6-7: Define roaming policy
+ *     (b6 b7)
+ *     (0  0 ): Default roaming behavior, allow roaming in all scenarios
+ *     (0  1 ): Disallow all roaming
+ *     (1  0 ): Allow roaming when final bmissed
+ *     (1  1 ): Reserve
+ * bit 8-9: Reserve for roaming
+ * bit 10: Disable css power collapse if setting
+ * bit 11: Disable sys sleep if setting
+ * bit 12-31: Reserve for future useage
+ *
+ * </ini>
+ */
+#define CFG_LATENCY_FLAGS_ULTRALOW_NAME    "wlm_latency_flags_ultralow"
+#define CFG_LATENCY_FLAGS_ULTRALOW_MIN     (0x0)
+#define CFG_LATENCY_FLAGS_ULTRALOW_MAX     (0xffffffff)
+#define CFG_LATENCY_FLAGS_ULTRALOW_DEFAULT (0xc83)
 /*
  * Max peers number of SAP
  */
@@ -5391,6 +5647,30 @@ FG_BTC_BT_INTERVAL_PAGE_P2P_STA_DEFAULT
 #define CFG_COEX_PTA_CONFIG_PARAM_DEFAULT (0x00000000)
 #endif
 
+#ifdef FEATURE_COEX_TPUT_SHAPING_CONFIG
+/*
+ * <ini>
+ * gCoexTputShapingEnable - enable/disable Traffic shaping for BT/Wifi
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to enable Traffic shaping between QCA wifi and External BT.
+ * set 1 to enable, or set 0 to disabled.
+ *
+ * Related: none
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+
+#define CFG_COEX_TPUT_SHAPING_ENABLE         "gCoexTputShapingEnable"
+#define CFG_COEX_TPUT_SHAPING_ENABLE_MIN     (0)
+#define CFG_COEX_TPUT_SHAPING_ENABLE_MAX     (1)
+#define CFG_COEX_TPUT_SHAPING_ENABLE_DEFAULT (0)
+#endif
+
 /*
  * <ini>
  * arp_ac_category - ARP access category
@@ -5570,6 +5850,29 @@ FG_BTC_BT_INTERVAL_PAGE_P2P_STA_DEFAULT
 #define CFG_ENABLE_MONITOR_ON_STA_MIN     (0)
 #define CFG_ENABLE_MONITOR_ON_STA_MAX     (1)
 #define CFG_ENABLE_MONITOR_ON_STA_DEFAULT (0)
+
+/*
+ * <ini>
+ * enable_sae_for_sap - Enable/Disable SAE support in driver for SAP
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This ini is used to enable/disable SAE support in driver for SAP mode
+ * Driver will process/drop the SAE authentication frames based on this config.
+ *
+ * Related: None
+ *
+ * Supported Feature: SAE
+ * Usage: External
+ *
+ * </ini>
+ */
+
+#define CFG_ENABLE_SAE_FOR_SAP_NAME    "enable_sae_for_sap"
+#define CFG_ENABLE_SAE_FOR_SAP_DEFAULT (1)
+#define CFG_ENABLE_SAE_FOR_SAP_MIN     (0)
+#define CFG_ENABLE_SAE_FOR_SAP_MAX     (1)
 
 #ifdef WLAN_FEATURE_SAP_TO_FOLLOW_STA_CHAN
 /*SAP Channel Switch Support*/
@@ -6147,6 +6450,7 @@ struct hdd_config {
    v_BOOL_t                    enableIbssHeartBeatOffload;
    v_U32_t                     antennaDiversity;
    v_BOOL_t                    fEnableSNRMonitoring;
+   bool                        enable_fast_ch_switch_cali;
    /*PNO related parameters */
 #ifdef FEATURE_WLAN_SCAN_PNO
    v_BOOL_t                    configPNOScanSupport;
@@ -6475,6 +6779,10 @@ struct hdd_config {
    uint32_t                    coex_pta_config_param;
 #endif
 
+#ifdef FEATURE_COEX_TPUT_SHAPING_CONFIG
+   uint32_t                    coex_tput_shaping_enable;
+#endif
+
 #ifdef WMI_COEX_BTC_DUTYCYCLE
    uint32_t               coex_btc_PauseDuration;
    uint32_t               coex_btc_UnPauseDuration;
@@ -6652,6 +6960,7 @@ struct hdd_config {
    uint32_t sleep_power_mode;
 #ifdef WLAN_FEATURE_SAE
    bool is_sae_enabled;
+   bool enable_sae_for_sap;
 #endif
    bool per_chain_stats_enabled;
 
@@ -6662,6 +6971,16 @@ struct hdd_config {
 #ifdef MULTI_IF_LOG
    uint32_t host_log_custom_nl_proto;
 #endif
+
+   uint32_t  mask_tx_legacy_rate;
+   uint32_t  mask_tx_ht_rate;
+
+	uint16_t wlm_latency_enable;
+	uint16_t wlm_latency_level;
+	uint32_t wlm_latency_flags_normal;
+	uint32_t wlm_latency_flags_moderate;
+	uint32_t wlm_latency_flags_low;
+	uint32_t wlm_latency_flags_ultralow;
 };
 
 typedef struct hdd_config hdd_config_t;
